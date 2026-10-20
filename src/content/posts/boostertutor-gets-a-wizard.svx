@@ -5,6 +5,14 @@ date: 2026-10-19
 tags: [web]
 ---
 
+<img
+	src="/booster-tutor/gnarl-edgibel.webp"
+	alt="Gnarl Edgibel, a mouthless cartoon wizard in a periwinkle robe and hat, pointing one finger up"
+	width="800"
+	height="999"
+	class="post-art"
+/>
+
 Last time I said I'd write again once the Claude layer was designed. Well, it got
 designed, then built, and then Phase 5 came along and turned the whole thing into an
 actual website you can use. That was a busy few days. The short version is that you

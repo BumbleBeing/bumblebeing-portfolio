@@ -320,6 +320,17 @@
 		0 4px 10px -2px var(--shadow-spread);
 }
 
+/* A transparent illustration inside a Post body, such as a mascot. Its drop
+ * shadow is baked into the image, so it gets no box-shadow or radius. */
+.post-art {
+	display: block;
+	width: 100%;
+	max-width: 16rem;
+	height: auto;
+	margin-inline: auto;
+	margin-block: 0 1.5rem;
+}
+
 /* ---------------------------------------------------------------------------
  * Card rows inside a Post body.
  *
