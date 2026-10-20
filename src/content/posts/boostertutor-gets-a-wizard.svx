@@ -1,0 +1,100 @@
+---
+title: BoosterTutor Gets a Wizard
+blurb: Draft Review works end to end now, with a deck builder, a much longer Draft Summary, and a little mouthless wizard to deliver it.
+date: 2026-10-19
+tags: [web]
+---
+
+Last time I said I'd write again once the Claude layer was designed. Well, it got
+designed, then built, and then Phase 5 came along and turned the whole thing into an
+actual website you can use. That was a busy few days. The short version is that you
+can now paste a 17Lands link and get a full review of your draft back, and there's a
+wizard involved.
+
+First, the question I left hanging: what does a review say when you didn't make any
+mistakes? The answer I landed on is a **Noted Pick**. Any `questionable` or `mistake`
+pick gets a written note, and so does a "narrow" pick, where the pack had exactly one
+right answer hiding among a couple of tempting wrong ones and you found it. Everything
+else just gets its verdict, no essay attached. A draft with nothing worth noting is a
+perfectly valid outcome, and I'd rather say nothing than pad it out.
+
+## Paste a link, get a review
+
+The core loop is done. You hand the site a 17Lands link, the backend fetches that
+draft once and keeps the parsed log in what I'm calling the Replay Cache, and every
+verdict gets recomputed from it on the spot. Nothing about the review itself is
+stored. If the card stats update overnight, your review updates with them, and a
+second look at the same draft never bothers 17Lands again.
+
+I also threw out a whole job queue from the original plan. It assumed reviews would
+take 10 to 20 seconds and need background workers and polling. In reality the verdicts
+are pure Python and come back almost instantly, so every request just waits for its
+answer like a normal web page. One less moving part to break.
+
+## Building your deck
+
+After the picks, there's a deck builder: drag your 40 cards in and get Deck Ratings
+back. Each part of the deck (card quality, curve, synergy, removal, mana) gets a letter
+grade based on where it ranks against real 40-card decks from the 17Lands game data.
+So a B in curve means your curve stacks up well against the decks people actually
+played, not that I decided 16 creatures sounded like a B.
+
+The overall grade comes from a regression of game wins on those same metrics, fitted
+per format, which means the data decides which parts of a deck matter most. For the
+mana, I compare your color sources against Frank Karsten's published tables for
+casting spells on curve, because that question already has a well-known answer and I
+had no business reinventing it.
+
+## Claude, behind a locked door
+
+Pick Notes are written by Claude Haiku the moment you open one, and the longer Draft
+Summary comes from Claude Sonnet after you submit a deck. Both are fully built and
+running on the live site, but only for me for now, behind an admin key. Accounts don't
+exist until Phase 6, and I'm not letting anonymous traffic run up a Claude bill. When
+accounts land, the key check just becomes a signed-in check and nothing else changes.
+
+## Meet Gnarl
+
+The first version of the review page was a deliberate placeholder, and it looked like
+one. The overhaul gives the whole site a library feel: parchment backgrounds, dark
+blue ink, lapis for links, and EB Garamond for the headings. It also gives the coach a
+face. His name is **Gnarl Edgibel**, he's a little cartoon wizard in a periwinkle robe,
+and he has no mouth, which I find really charming. The art is commissioned, and for now
+he has exactly one pose, pointing, which doubles as his "explaining" pose.
+
+Gnarl only shows up where Claude is talking. His notes appear in a Dialogue Box, with
+Gnarl framed in a book spine next to a parchment panel holding the text. He never
+appears next to the numbers, because the numbers are Python's, not his. Every card in a
+pack also got its own Pack Card with two borders: the inner one shows the verdict color,
+and the outer one shows whether it was your pick.
+
+## A Draft Summary with something to say
+
+The first Draft Summary was about 200 words, and reading real ones, I didn't love
+them. They said what happened without saying why, and they skipped whole topics, like
+how the deck actually wins or what was sitting in the sideboard. Since the output
+tokens are cheap next to the brief going in, tripling the length only costs about a
+cent. So version two is about 640 words in seven sections: how the draft went, the
+signals, the deck, how it plays, the build, a short numbered list of lessons, and a
+couple of key picks.
+
+It also gets a lot more to work with. Python now tracks every time your draft really
+changed colors, counting a switch only once the new pair holds for three picks in a
+row so one stray pick doesn't register as a pivot. It also scores your sideboard
+against the deck you built and passes along any cards that were better than your
+weakest playable. I ran twelve test summaries through the live eval, all twelve passed
+the "no invented numbers" check, each took 11 to 15 seconds, and the whole run cost
+about 53 cents.
+
+## Tomes
+
+Last up, the system for actually handing out Claude calls. Unlocking a draft's
+Gnarl's Notes costs one **Tome**, and once a draft is unlocked, all of its notes and its
+summary are free. Everyone gets two tomes a day, reset at midnight UTC, and they don't
+stack. There's no stored balance anywhere either. The site just counts how many drafts
+you've unlocked since midnight, which leaves one less number that can drift out of sync.
+For now only I can see the button, but it's ready for when accounts arrive.
+
+What's left in Phase 5 is a few smaller coaching tweaks and then verification, which
+means running my own drafts through it, ones where I already know what I did wrong. If
+BoosterTutor doesn't catch the mistake, that's a bug in the analysis, not in the prompt.
