@@ -1,10 +1,12 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import { projects } from '$lib/content';
-	import { Button, ProjectCard, Seo } from '$lib/components';
+	import { posts, projects } from '$lib/content';
+	import { Button, PostCard, ProjectCard, Seo } from '$lib/components';
 
 	// The home strip shows the three most recent; /projects shows everything.
 	const featured = $derived(projects.slice(0, 3));
+	// Newest first, stacked; the Beelog has the rest.
+	const recentPosts = $derived(posts.slice(0, 3));
 </script>
 
 <Seo />
@@ -65,6 +67,25 @@
 			<div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
 				{#each featured as project (project.slug)}
 					<ProjectCard {project} />
+				{/each}
+			</div>
+		</section>
+	{/if}
+
+	{#if recentPosts.length > 0}
+		<section class="flex flex-col gap-6">
+			<div class="flex items-baseline justify-between gap-4">
+				<h2 class="font-display text-2xl font-semibold">Recent posts</h2>
+				<a
+					href={resolve('/blog')}
+					class="text-sm text-ink-muted underline-offset-4 hover:underline"
+				>
+					All posts
+				</a>
+			</div>
+			<div class="flex flex-col gap-4">
+				{#each recentPosts as post (post.slug)}
+					<PostCard {post} level={3} />
 				{/each}
 			</div>
 		</section>

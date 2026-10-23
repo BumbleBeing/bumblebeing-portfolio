@@ -1,7 +1,6 @@
 <script lang="ts">
-	import { resolve } from '$app/paths';
 	import { posts } from '$lib/content';
-	import { Card, Chip, Seo } from '$lib/components';
+	import { PostCard, Seo } from '$lib/components';
 </script>
 
 <Seo title="Beelog" description="Notes on what Jackson is building, and why." />
@@ -15,18 +14,7 @@
 	{#if posts.length > 0}
 		<div class="flex flex-col gap-4">
 			{#each posts as post (post.slug)}
-				<Card href={resolve('/blog/[slug]', { slug: post.slug })}>
-					<time datetime={post.date} class="text-sm text-ink-muted">{post.date}</time>
-					<h2 class="font-display text-xl font-semibold">{post.title}</h2>
-					<p class="text-sm text-ink-muted">{post.blurb}</p>
-					{#if post.tags.length > 0}
-						<div class="flex flex-wrap gap-2">
-							{#each post.tags as tag (tag)}
-								<Chip {tag} label={tag} />
-							{/each}
-						</div>
-					{/if}
-				</Card>
+				<PostCard {post} />
 			{/each}
 		</div>
 	{:else}
