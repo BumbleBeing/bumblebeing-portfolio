@@ -1,0 +1,107 @@
+---
+title: BoosterTutor, After the Email
+blurb: 17Lands asked me to stop fetching drafts, so the input I built everything on is gone. Here's what replaced it, plus practice drafts, a second set, and why the Tomes stay free.
+date: 2026-10-22
+tags: [web]
+---
+
+Phase 6 wrapped up yesterday, so accounts are real now. You can sign in with email or
+Google, save a draft as a Study, and find it later in My Studies. That also means
+Gnarl finally comes out from behind the admin key: anyone with an account gets two
+Tomes a day to unlock his notes. I was planning to write about that, but then an email
+showed up and changed the shape of the whole project, so this post is mostly about
+that instead.
+
+## 17Lands said no
+
+Two posts ago I explained how BoosterTutor would fetch one user's draft from 17Lands
+when they pasted the link. I wrote it down as an accepted risk, with a note that the whole
+thing would be withdrawn if 17Lands objected. I'd emailed them to ask, and on October 21 they
+answered. The public datasets are fine to use with attribution, but any automated
+access to the site is not, and they named draft replays specifically. They're dealing
+with a lot of unauthorized traffic, and it's holding back how often they can publish
+the public data that tools like mine depend on.
+
+That's a pretty clear answer, and honestly a fair one. My first instinct was to keep
+the code around behind a switch in case they ever offered an official export. Then I
+realized there were no users yet, so a switch would just be dead code pretending to be
+a plan. So the link parser, the endpoint, the rate limits and every line of copy about
+pasting a link are all deleted, and the cached drafts were erased along with them. The
+17Lands credit for the statistics stays, since those still come from their public
+data. The lesson I'm taking away is to ask before building on someone else's site, not
+after.
+
+## Practice drafts
+
+Losing the link left Draft Review with no way in, which made Phase 7 a lot more
+urgent. Practice Draft has been running in my DraftDouble prototype for weeks, and now
+it lives in BoosterTutor. You sit down at a table with seven bots, open real packs
+pulled from 17Lands' public draft data, and draft all 42 picks. Once you're done, you
+get the same review as before, verdicts and all, and you can unlock Gnarl's Notes with
+a Tome.
+
+The bots are deliberately imperfect. Across about 1.5 million human picks where a
+`questionable` card was available, people took it 18% of the time, so the bots do the
+same. I also ran realism checks comparing bot tables to human ones, and the bots fail
+all three. Humans crowd into five color pairs, while the bots spread evenly across all
+ten. I'm keeping them anyway. They're there to pass you believable packs, not to
+imitate a Platinum player's taste in archetypes, and now the numbers that show how far
+off they are are written down instead of guessed.
+
+Every practice draft is also pinned to a Stats Snapshot, a frozen copy of the format's
+numbers at the moment you started. If the stats update tomorrow, your draft's verdicts
+don't shift under you. That's what makes Redrafts work: you can replay any practice
+draft from pick one with the same packs, and the bots repeat their original picks until
+your choices change what they see. Redrafts branch into a little tree under the
+original in My Studies, so you can try the line you didn't take and see what happens.
+
+Before turning it on, I load-tested it against the live server. Grading a pick takes
+about 25 milliseconds of CPU, and a live pick takes about half a second, nearly all of
+it network and database round trips. Eight scripted drafts running at once barely
+moved the CPU, so the server is in no danger of getting overwhelmed by people drafting
+at human speed.
+
+## A second set, and a proper tagger
+
+Then came another surprise: the Hobbit set can't be drafted on Arena anymore. The real
+logs I had on my own machine were a Reality Fracture draft and a couple of others, so a
+v1 that only reviewed HOB would have nothing to review. Reality Fracture (FRA) now joins
+v1, for both Draft Review and Practice Draft.
+
+The rule was that FRA's numbers get measured, not borrowed from HOB. Its land targets,
+Deck Ratings and bot behavior all come from its own game data. That paid off right
+away. FRA players take a questionable card 21% of the time, not 18%, so the bot rate is
+now stored per format. FRA's bots also land much closer to how humans spread across
+archetypes, since FRA's players are more evenly split between color pairs to begin
+with.
+
+FRA also needed a full card taxonomy, all the tags that feed the synergy term. HOB's
+was written in a separate tagger app inside DraftDouble, so I ported it into
+BoosterTutor as an admin-only page. It also gained a panel for mana sources, which the
+old one never had. Edits stay in the page until I either push the whole set to live in
+one transaction, or download the JSON. If anything is off, even one misspelled card
+name, nothing gets saved.
+
+## Arena logs are next
+
+The real replacement for the 17Lands link is Arena's own `Player.log`, the file the
+game writes on your computer when detailed logging is on. It records every pack you
+see and every card you take. It also holds your screen name, account ID, an auth token
+and your opponents' names, so I'm being careful with it. The plan is for the browser to
+read the file locally and copy out only a short list of fields, the card IDs and pick
+numbers. It'll then show you exactly what will be sent, and send only that, while
+Python does all the actual parsing. The parser and a set of scrubbed test logs are
+already built, and the browser side is what I'm working on next.
+
+## The Tomes stay free
+
+Last thing. I'd planned to have BoosterTutor pay for itself, with a few free Tomes and
+then small packs for sale. Then I actually read Wizards of the Coast's Fan Content
+Policy, which says fan content can't be put behind a payment. Gnarl's Notes are
+commentary on Magic cards, so selling the Tomes that unlock them is selling access.
+It does allow donations, which is how tools like 17Lands keep the lights on.
+
+So the Tomes are never for sale. Everyone gets two a day, and BoosterTutor will take
+donations through Ko-fi, with no perks for donors. A Tome costs a few cents in Claude
+calls, so I think it'll work out fine. I just need to get through the Arena import
+first.
