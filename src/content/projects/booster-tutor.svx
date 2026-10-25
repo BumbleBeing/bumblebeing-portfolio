@@ -70,15 +70,20 @@ file also holds account IDs and auth tokens, so the browser extracts only card I
 and pick numbers, shows you exactly what it's about to send, and sends nothing else.
 The parser is tested against scrubbed logs.
 
-## Under the hood
+## The architecture
 
-The API is FastAPI and SQLAlchemy on Postgres, with Alembic for migrations, `uv` for
-packaging, and mypy, ruff and pytest running on every change. The front end is
-SvelteKit with TypeScript and Tailwind, tested with Vitest in a real browser through
-Playwright. The API runs on Render, the web app on Vercel, and CI on GitHub Actions.
-Practice drafts are pinned to a frozen snapshot of the format's stats, so a nightly
-data update never changes a verdict after the fact, and I load-tested the live server
-before turning them on. Grading a pick takes about 25 milliseconds of CPU.
+- **Backend.** FastAPI and SQLAlchemy on Postgres, with Alembic migrations, `uv` for
+  packaging, and strict mypy, ruff and pytest on every change.
+- **Front end.** SvelteKit, TypeScript and Tailwind, tested with Vitest in a real
+  browser through Playwright.
+- **Accounts.** Sign-in with email or Google, saved Studies, and per-user limits.
+- **Deployment.** API on Render, web on Vercel, CI on GitHub Actions, with health
+  endpoints and a Postgres-backed rate limiter.
+- **Snapshots.** Practice drafts are pinned to a frozen copy of the format's stats, so
+  a data update never changes a verdict after the fact. Grading a pick takes about 25
+  milliseconds of CPU, which I confirmed with a load test on the live server.
+- **Decision records.** Around forty ADRs track how the scoring and architecture
+  changed over time.
 
 I've been writing about it as I go. Start with
 [Before the Words](/blog/boostertutor-before-the-words), then
