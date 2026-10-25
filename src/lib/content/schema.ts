@@ -53,6 +53,8 @@ export const projectSchema = z.object({
 	/** Absent when the source is private — the page says so rather than showing a gap. */
 	repo: z.url().optional(),
 	demo: z.url().optional(),
+	/** The Project's own live site. Takes the primary button, and stands in for the repo link. */
+	site: z.url().optional(),
 	/** A PDF in static/, standing in as the public artifact when there is no repo. */
 	report: z.string().startsWith('/').optional(),
 	/**

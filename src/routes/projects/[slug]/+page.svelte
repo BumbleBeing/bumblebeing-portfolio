@@ -39,7 +39,9 @@
 					Play in browser
 				</Button>
 			{/if}
-			{#if project.repo}
+			{#if project.site}
+				<Button variant="primary" size="sm" href={project.site}>Visit Page</Button>
+			{:else if project.repo}
 				<Button variant="outline" size="sm" href={project.repo}>Source</Button>
 			{:else}
 				<!--
