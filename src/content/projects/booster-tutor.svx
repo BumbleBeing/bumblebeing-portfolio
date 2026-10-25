@@ -7,92 +7,80 @@ date: 2026-09-22
 site: https://www.boostertutor.dev
 ---
 
-BoosterTutor is a coach for Magic: the Gathering Limited. You draft, either against
-a table of bots or by importing a draft from Arena, and it tells you which picks cost
-you and why. Not a score out of ten. An actual explanation, the kind you'd get from
-someone sitting next to you. It's live, it has accounts and real users' data to be
-careful with, and I've built every piece of it myself: the data pipeline, the
-backend, the front end, the deployment, and the prompts.
+BoosterTutor is a coach for Magic: the Gathering Limited. You draft against a table
+of bots, or import a real draft from Arena, and it tells you which picks cost you and
+why. Not a score out of ten, but an actual explanation, the kind you'd get from
+someone sitting next to you. It's live now, with accounts and everything, and I built
+all of it myself: the data pipeline, the API, the front end, the deployment and the
+prompts.
 
-## The one rule
+The whole thing rests on one rule I wrote into `CONTEXT.md` on day one. Python
+computes every fact and every verdict, and the LLM only explains them. Ask a language
+model to grade a pick and it will hand you a confident number it can't back up. Hand
+it the number and ask it to explain, and it's genuinely useful. Almost every design
+decision since has been some version of keeping that line clean.
 
-The whole thing rests on a rule I wrote into `CONTEXT.md` on day one: Python computes
-every fact and every verdict, and the LLM only explains them. Ask a language model to
-grade a pick and it will give you a confident number it can't back up. Hand it the
-number and ask it to explain, and it stays useful. Everything else in the project is
-shaped by that split.
+## The math
 
-## The data and the math
+Card values come from the public datasets [17Lands](https://www.17lands.com)
+publishes, which a scheduled GitHub Actions job loads into Postgres. Every card gets
+a fitness score, meaning what it's worth to your specific pool at that moment,
+measured in percentage points of win rate. That gives everything one scale, so "that
+card was worth 2pp less to your deck" actually means something. The score includes a
+synergy term fed by a hand-built tag taxonomy for each set, and a guess at which of
+the ten two-color archetypes your pool is turning into.
 
-Card values come from [17Lands](https://www.17lands.com)' public datasets, loaded by
-ingest jobs that run on a schedule through GitHub Actions. I measured those numbers
-before trusting them, set by set, rather than borrowing from one format to fill in
-another.
+Picks are graded on the gap to the best card in the pack instead of on rank, because
+most picks are close and flagging all of them buries the three that mattered. If
+nothing was at stake in a pack, the verdict is `indifferent`. For the deck builder,
+each part of a deck (curve, synergy, removal, mana and so on) gets a letter grade
+based on where it ranks against real 40-card decks, and the overall grade comes from
+a regression of game wins on those same metrics, fitted per format. Mana gets checked
+against Frank Karsten's published tables, since that question already has an answer.
 
-- **Fitness scores.** Every card gets a score for what it's worth to your specific pool
-  at that moment, in percentage points of win rate, with terms for synergy and for how
-  committed you are to a color pair.
-- **Grading by gap.** Picks are graded on the distance to the best card in the pack,
-  not on rank, with fixed bands and an `indifferent` verdict when nothing was at stake.
-- **Archetype hypotheses.** Ten two-color archetypes get scored against your pool as
-  competing guesses at what you're trying to become.
-- **Deck ratings.** Letter grades for curve, mana, synergy and the rest, ranked against
-  real 40-card decks, with an overall grade from a regression fitted per format. Mana
-  is checked against Frank Karsten's published tables.
-- **Backtests.** When I wanted a wheel-based "openness" signal, I tested it against
-  tens of thousands of real picks, and the data told me to cut it down. Several design
-  choices here exist because a number said so.
+I tried to trust the numbers as little as possible. When I tried folding a "which colors
+are open" signal from wheeling packs into the score, a backtest over 43,650 drafts fit
+its weight to exactly zero, so I retired it as a score and let the wheel just report
+facts. The bots in Practice Draft are calibrated against
+about 1.5 million human picks, and I wrote down the places where they still don't
+look like humans. There are around forty ADRs in the repo tracking how this all
+changed, including a full rewrite of the classification system once I realized one
+label was answering two different questions.
 
-## Where the LLM comes in
+## The Claude layer
 
-Claude Haiku writes a note for each pick that deserves one, and Claude Sonnet writes a
-longer summary of the whole draft. Both get a brief assembled from Python's verdicts,
-so there's nothing for them to invent. The notes come from a wizard character named
-Gnarl Edgibel, and they unlock with a daily allowance of Tomes.
+Claude Haiku writes a note for any pick worth commenting on, and Claude Sonnet writes
+a longer summary of the whole draft. Both get a brief assembled from Python's
+verdicts, so there's nothing for them to make up. I designed that interface on paper
+before building any of it, and it's the reason a draft with nothing worth noting
+comes back with no notes instead of filler.
 
-- **Prompt and brief design.** The model sees structured facts and writes prose, and I
-  designed that interface on paper before building any of it.
-- **Cost controls.** Every call is logged with its cost, there's a hard daily spending
-  cap, and per-user rate limits sit on every endpoint that spends money.
-- **Honest scope.** A draft with nothing worth noting gets no note, because padding
-  would only add noise.
+Since every note costs real money, each call is logged with its cost, and a daily
+spending cap shuts things off before a bad day gets expensive. A Postgres-backed rate
+limiter covers the endpoints that spend money or write data. Users get a couple of
+Tomes a day to unlock Gnarl's notes, and they stay free because Wizards' Fan Content
+Policy doesn't allow fan content behind a payment.
 
-## Practice drafts
+## Keeping it honest
 
-You sit at a table with seven bots, open real packs from public draft data, and draft
-all 42 picks. The bots are calibrated against about 1.5 million human picks so they
-make believable mistakes, and I wrote down where they still don't match human tables
-instead of pretending they do.
+My first plan was to fetch a user's draft from 17Lands when they pasted a link. They
+asked me not to, which was a fair answer, so I deleted the feature and the cached
+data it had collected. The replacement reads Arena's `Player.log` in the browser. That
+file also holds account IDs and auth tokens, so the browser extracts only card IDs
+and pick numbers, shows you exactly what it's about to send, and sends nothing else.
+The parser is tested against scrubbed logs.
 
-Each draft is pinned to a frozen snapshot of the format's stats, so verdicts never
-shift under you, and any draft can be replayed from pick one as a Redraft that
-branches into a tree. Before launching it I load-tested the live server: grading a pick
-takes about 25 milliseconds of CPU.
+## Under the hood
 
-## Privacy and platform rules
+The API is FastAPI and SQLAlchemy on Postgres, with Alembic for migrations, `uv` for
+packaging, and mypy, ruff and pytest running on every change. The front end is
+SvelteKit with TypeScript and Tailwind, tested with Vitest in a real browser through
+Playwright. The API runs on Render, the web app on Vercel, and CI on GitHub Actions.
+Practice drafts are pinned to a frozen snapshot of the format's stats, so a nightly
+data update never changes a verdict after the fact, and I load-tested the live server
+before turning them on. Grading a pick takes about 25 milliseconds of CPU.
 
-This is the part I'd point a hiring manager at. 17Lands asked me to stop fetching
-drafts from their site, so I deleted that feature outright, along with the cached data.
-The replacement reads Arena's `Player.log` locally in the browser, extracts only card
-IDs and pick numbers, shows you exactly what will be sent, and sends nothing else,
-because the raw file also holds account IDs and auth tokens. The parser is tested
-against scrubbed logs. I also read Wizards' Fan Content Policy and kept the Tomes free
-instead of selling them.
-
-## The engineering around it
-
-- **Backend.** FastAPI and SQLAlchemy on Postgres, with Alembic migrations, `uv` for
-  packaging, and strict mypy, ruff and pytest on every change.
-- **Front end.** SvelteKit, TypeScript and Tailwind, tested with Vitest in a real
-  browser through Playwright.
-- **Accounts.** Sign-in with email or Google, saved Studies, and per-user limits.
-- **Deployment.** API on Render, web on Vercel, CI on GitHub Actions, with health
-  endpoints and a Postgres-backed rate limiter.
-- **Decision records.** Dozens of ADRs track how the scoring and architecture changed,
-  including a full rewrite of the classification system after I realized one label
-  was answering two different questions.
-
-I've written about how it came together as I went: start with
+I've been writing about it as I go. Start with
 [Before the Words](/blog/boostertutor-before-the-words), then
 [Gets a Wizard](/blog/boostertutor-gets-a-wizard) and
 [After the Email](/blog/boostertutor-after-the-email).
