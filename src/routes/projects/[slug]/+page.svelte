@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import { Button, Chip, ImageStrip, Seo } from '$lib/components';
+	import { BackButton, Button, Chip, ImageStrip, Seo } from '$lib/components';
 
 	let { data } = $props();
 	const project = $derived(data.project);
@@ -10,6 +10,8 @@
 <Seo title={project.title} description={project.blurb} type="article" publishedAt={project.date} />
 
 <article class="flex flex-col gap-6">
+	<BackButton href={resolve('/projects')}>Back to projects</BackButton>
+
 	<header class="flex flex-col items-center gap-3 text-center">
 		<h1 class="font-display text-3xl font-bold sm:text-4xl">{project.title}</h1>
 

@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { Chip, Seo } from '$lib/components';
+	import { resolve } from '$app/paths';
+	import { BackButton, Chip, Seo } from '$lib/components';
 
 	let { data } = $props();
 	const post = $derived(data.post);
@@ -9,6 +10,8 @@
 <Seo title={post.title} description={post.blurb} type="article" publishedAt={post.date} />
 
 <article class="flex flex-col gap-6">
+	<BackButton href={resolve('/blog')}>Back to blog</BackButton>
+
 	<header class="flex flex-col items-center gap-3 text-center">
 		<time datetime={post.date} class="text-sm text-ink-muted">{post.date}</time>
 		<h1 class="font-display text-3xl font-bold sm:text-4xl">{post.title}</h1>
