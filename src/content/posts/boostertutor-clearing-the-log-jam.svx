@@ -1,0 +1,81 @@
+---
+title: BoosterTutor, Clearing the Log Jam
+blurb: The Arena import is live, and the first real draft it reviewed was mine. It did not go well, for me or for the import.
+date: 2026-10-26
+tags: [web]
+---
+
+The first real draft log I fed to the Arena import was refused outright, with every
+single card unmatched. Not a great start for a feature I'd spent the better part of a
+week on.
+
+The parser was fine. The problem was the card data. Arena identifies cards by its own
+internal IDs, and I'd been relying on Scryfall to map those to actual cards, but
+Scryfall didn't have them for Reality Fracture yet. 17Lands does publish them in a
+public card list, so the data workflow now reads that list, matches each card by name,
+and keeps the IDs in a fallback table. If a card is still missing, you get a short
+message saying BoosterTutor doesn't know it yet, instead of a pile of errors.
+
+With that fixed, I uploaded the same draft on the live site on October 24 and got a
+full review back. The record at the top read 0-3. That one's on me, not the parser.
+
+## What leaves your computer
+
+`Player.log` is the file Arena writes on your machine when detailed logging is on. It
+records every pack you see and every card you take, but it also holds your screen
+name, your account ID and an auth token, none of which I want anywhere near my
+server. So the browser does the filtering before anything is uploaded. A background
+worker streams through the file and only stops on lines that begin with a few known
+markers. From each of those it copies a fixed set of fields into a fresh object, never
+the raw line. You then get a list of the drafts it found, and before you send one you
+can see exactly what's in the payload. The actual parsing still happens in Python,
+since the rule from day one is that Python works out every fact.
+
+Real logs turned out to be messier than anything I'd read about them. One of mine had
+a draft split in two by a game restart, with a dropped connection somewhere in the
+middle, so a handful of picks simply aren't in the file. I went back and forth on
+refusing drafts like that and ended up reviewing them anyway. The parser fills in what
+it can from your final pool, and the review works with what's there. It also reads
+your match record now, which is how mine knew about the 0-3.
+
+## Practice drafts, no account needed
+
+You can now practice draft without signing in. The browser holds a random secret for
+your draft and the server keeps only a hash of it, so the draft is yours without an
+account attached. Drafts also start out unsaved. Hit Save Draft and it becomes a Study,
+and if you were signed out, signing in first claims it. Anything left unsaved for a
+day gets cleaned up when the next draft starts.
+
+While I was in there, I noticed FRA's pack library was eating about 35 MB of memory on
+a server that only has 512. It's around 170,000 opening packs, stored as nested
+tuples. Packing every card into two bytes in one flat array brought it down to
+4.6 MB.
+
+## The boring, important stuff
+
+Most of the last few days went into Phase 9, which is hardening. None of it shows up
+on the page, but it's what lets me sleep once strangers are using this. Every request
+now carries an ID that appears in the logs and in any error message, so a bug report
+can point me at the exact request. Errors from the API and the website both go to
+Sentry, CI scans for leaked secrets, and Dependabot keeps an eye on packages. An
+accessibility pass also turned up a bunch of keyboard and screen reader problems that
+are now fixed.
+
+My favorite fix came out of an actual incident. A few times Render just didn't deploy
+after a merge, and the database migrations sat unapplied until I noticed and deployed
+by hand. Now the health check compares the database's migration version against the
+one the code expects, and reports unhealthy when they differ. There's also a daily job
+that totals up yesterday's Claude spending and emails me if it passes $3, so I hear
+about it well before the $5 daily cap does anything. Somewhere in the middle of all
+this I upgraded to SvelteKit 3, and it promptly broke half of the Sentry setup.
+
+A couple of launch items also jumped the queue. Gnarl's Notes now end with "Was this
+helpful?" and a thumbs up or down, with room for a comment if you want to leave one.
+Each rating is stored with the prompt version that wrote the note, so once people are
+actually using it I'll know which prompt coaches better. The footer picked up the Fan
+Content Policy notice that Wizards requires, a short Terms page, and the Ko-fi link I
+mentioned last time.
+
+There's a little of Phase 9 left, and the help page still needs a log from someone on
+a Mac. Then I'll start letting other people in, and hopefully their records look
+better than mine.

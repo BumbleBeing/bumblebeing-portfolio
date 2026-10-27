@@ -87,5 +87,6 @@ The parser is tested against scrubbed logs.
 
 I've been writing about it as I go. Start with
 [Before the Words](/blog/boostertutor-before-the-words), then
-[Gets a Wizard](/blog/boostertutor-gets-a-wizard) and
-[After the Email](/blog/boostertutor-after-the-email).
+[Gets a Wizard](/blog/boostertutor-gets-a-wizard),
+[After the Email](/blog/boostertutor-after-the-email) and
+[Clearing the Log Jam](/blog/boostertutor-clearing-the-log-jam).
