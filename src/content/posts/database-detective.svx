@@ -1,0 +1,54 @@
+---
+title: SQL sleuthing with Database Detective
+blurb: One of my new favorite learning games; the perfect mix of practical education, mechanical fun, and coziness.
+date: 2026-11-02
+tags: [misc]
+---
+
+<img
+	src="/games/database-detective/header.webp"
+	alt="Database Detective: Minor Crimes Division title art, a cartoon pig cop peeking over a retro desktop window"
+	width="616"
+	height="353"
+	class="post-screenshot"
+/>
+
+I've been playing *Database Detective: Minor Crimes Division* lately, and it's taken
+up a frankly embarrassing amount of my evenings. You play a new hire at the Los
+Zorangeles police department, and your whole job is solving petty crimes by querying
+the city's databases. That's it. You read a case, open the search window, and write
+SQL until the answer falls out.
+
+I'll be honest, the learning curve is a little steep. The game doesn't hold your hand
+for long, and there were a few cases where I stared at a blank query window for an
+uncomfortably long time. But it's careful about *when* it teaches you things. A new
+piece of SQL only shows up in the manual once you've hit a case that clearly needs it,
+so a `JOIN` arrives right when you've been stuck cross-referencing two tables by hand
+and are begging for a better way. After that, you're on your own. There are no hints
+waiting to bail you out, just the handful of tools you've been given and a puzzle that
+expects you to combine them in ways the manual never spelled out. Struggling through
+that and landing on a query that works is genuinely satisfying.
+
+<img
+	src="/games/database-detective/manual.webp"
+	alt="The in-game desktop, showing a parody SQL for Database Detectives manual, a search window reading SELECT * FROM uhh, and a small pig cop offering help"
+	width="1280"
+	height="720"
+	loading="lazy"
+	class="post-screenshot"
+/>
+
+The tone is the other half of the fun. Everything looks like a chunky old desktop
+with a hand-drawn pig cop who pops up to ask if you need help with SQL, the case, or
+your personal problems. It's adorable. It's also, the further you go, pretty messed up.
+The "minor crimes" you're solving are often just people saying slightly the wrong
+thing online, and the internet in this world is very obviously built for the people
+watching it. The game never stops being cute about it, which somehow makes the whole
+thing creepier.
+
+What sticks with me most is how well it nails the educational part. A lot of learning
+games hand you a skill and then a box shaped exactly like that skill. This one hands
+you a pile of skills and a messy problem, and the actual work is figuring out which
+ones apply and how to fit them together *before* you type anything. That's what using
+SQL (or anything, really) is like in practice, and I'd love to see more games about
+learning hold themselves to that standard.
