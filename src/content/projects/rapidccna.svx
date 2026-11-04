@@ -1,0 +1,155 @@
+---
+title: RapidCCNA
+blurb: A Godot study game for the CCNA, with 600 questions, a timed mock exam, and a Cisco command line that grades labs on behavior.
+tags: [game]
+tools: [Godot 4.7, GDScript, Python, GUT, GitHub Actions]
+date: 2026-11-03
+repo: https://github.com/BumbleBeing/LearnNetworking
+---
+
+RapidCCNA is a study game for the Cisco CCNA 200-301 exam, built in Godot 4. It lives
+in LearnNetworking, the repo where I keep my own networking roadmap, and it exists
+because I wanted somewhere to practice that actually checks whether I understand what
+I'm doing. It has 42 lessons covering all 53 subtopics on the exam blueprint, 600
+original questions, 16 drills, 14 hands-on labs, and a timed mock exam. All of the
+question content is written from scratch in exam style, and none of it comes from
+real Cisco exams.
+
+The project went through nine milestones, M0 through M8, and the rule running through
+all of them is that learning comes before gameplay. Anything that looks like a game
+mechanic is there because it makes the studying stick.
+
+## How a session works
+
+Every unit follows the same loop. You get a short tutorial, then a guided drill with
+hints, place values and a worked solution after every item, then unguided rounds once
+you've had ten attempts with the training wheels on. After that, spaced repetition
+(SM-2) brings questions back right before you'd forget them. A unit counts as
+mastered at 85% accuracy over your last twenty unguided answers. Units that are pure
+theory, with no drill to play, end in a short unit quiz on their own questions
+instead, so the daily plan never stalls on them.
+
+The dashboard builds each day's session from what's due, then the next unmastered
+unit, always walking the exam areas in blueprint order. When you'd rather go practice
+OSPF, the Topics screen opens up every unit, drill and lab on demand, and it feeds the
+same progress and review schedule. Under every question there's a Study button that
+opens the question's full lesson over the screen and puts you back exactly where you
+were. Acronyms in lessons and questions are highlighted and show their full name on
+hover.
+
+## The drills
+
+Most of the sixteen drills are generated, so you never run out of items. Each one is
+an entry in `drills.json` plus a generator script with a `make_item(rng)` function, and
+they all share one screen, so adding a drill needs no UI code. The early ones cover
+binary, subnetting, routing tables, wildcard masks, ACLs and NAT. Later ones handle
+IPv6, cabling and interface faults, Wi-Fi channel planning, HSRP elections, service
+ports and syslog, and JSON and REST.
+
+A few of them are strict on purpose. The IPv6 Workshop grades compression against
+RFC 5952, so a valid but longer address is marked wrong, with the reason. The JSON
+drill asks whether a snippet is valid and why not, and since Godot's own parser lets
+some invalid JSON through, I cross-checked 300 validity verdicts and 100 path answers
+against Python's strict parser, with zero mismatches.
+
+The switching and routing puzzles (spanning tree, OSPF, EtherChannel and MAC address
+tables) sit on small pure-logic engines in `core/net`. The labs run on the same
+engines, so a drill and a lab can never disagree about who wins a root bridge
+election.
+
+## The IOS simulator
+
+The part I'm proudest of is `core/ios`, a simulation of the CCNA slice of Cisco IOS.
+It has the real modes and prompts, abbreviations like `sh ip int br`, `do` from any
+mode, `?` help, Tab completion, history, and IOS's own error messages, caret marker
+included. It covers interfaces, VLANs and trunks, static routes, ACLs, NAT, port
+security, single-area OSPF, EtherChannel, Rapid PVST+, CDP and LLDP, HSRP, DHCP, SSH,
+NTP, syslog and SNMP, plus output filters like `sh run | s ospf`. `ping` walks each
+device's routing table hop by hop, so it fails if either direction is missing a route.
+
+Labs are graded on how the network behaves, not on whether you typed the commands I
+had in mind. A check like `route_to` or `ospf_neighbor` asks the simulated network a
+question, so any valid configuration passes. Every lab is tested twice: it has to
+start unsolved, and its model solution has to complete every task. Eighteen smaller
+hidden labs sit behind command-line questions in the mock exam.
+
+Getting the details right meant sweating some state. HSRP elections advance after
+every command, so a higher-priority router that joins late stays standby until it has
+`preempt`, just like on real hardware. A relayed DHCP lease only works if the server
+can route its reply back to the relay. The OSPF router ID is picked when the process
+starts and sticks until `clear ip ospf process`, with the same warning IOS gives.
+Driving the labs by hand turned up some good bugs too. Godot 4.3's `range()` quietly
+truncates to 32 bits, so the DHCP server handed out addresses it was told to exclude,
+and `transport input ssh telnet` was being read as just `ssh`, which let a config
+with Telnet wide open pass the SSH-only checks.
+
+## The mock exam
+
+The mock exam comes in a full version (100 questions in 120 minutes) and a quick one
+(30 in 36). Questions are dealt to each exam area by the blueprint's weights, using
+largest remainders so the total always comes out right, then round-robin across
+subtopics so one big subtopic can't crowd out the rest. Questions from your last mock
+are held back until the fresh ones run out, and command-line tasks are capped at 5%
+because they take longer. There's a countdown, no feedback and no going back.
+
+Scores land on Cisco's 300 to 1000 scale with 825 to pass. Cisco doesn't publish how
+it scales, so that mapping is my best approximation, and the README says so. The
+report shows a per-area breakdown, the area costing you the most points, and every
+miss with its explanation, and those answers feed spaced repetition like any other
+review.
+
+## Keeping the content honest
+
+Six hundred questions is a lot to keep straight, so most of the rules live in CI. A
+validator checks every lesson and question against its schema and fails the build if
+any subtopic has fewer than five questions or any exam area can't fill a full mock. A
+second tool, `qa_content.py`, looks for the problems a schema can't see: a "(Choose
+two)" that doesn't match the answer key, stems that mention an exhibit that isn't
+there, duplicate choices, explanations too short to teach anything, and typed answers
+that only accept one spelling of an interface name.
+
+Its best catch was the answer key giving itself away. When one choice was clearly the
+longest, it was the right answer 58% of the time, when it should be closer to 25%, so
+always picking the wordiest option was a winning strategy. I rewrote the wrong answers
+on 228 questions to be as specific as the right ones, which brought it down to 36%,
+and CI now fails if it creeps back over 40%. A separate check fails the build if a
+lesson uses an acronym the glossary doesn't explain.
+
+## Accessibility
+
+A settings screen covers text size from 85% to 150%, a high contrast mode where every
+text color clears 7:1, reduced motion, and extra time on the mock exam for anyone with
+an accommodation. Every look meets WCAG AA, which a test checks, and right and wrong
+answers are labeled in words rather than by color alone. Everything can be driven
+from the keyboard.
+
+I upgraded to Godot 4.7 mainly for screen reader support through AccessKit. Every
+control has a name that makes sense out of context, so a screen reader hears "Network
+components: Study unit" instead of a dozen buttons that all say "Study," and results,
+terminal output and completed lab tasks are announced as they happen. A test opens
+every screen, question type and drill and fails on any control that's unnamed,
+duplicated or unreachable with Tab, and a script dumps what Orca actually receives on
+Linux. That's how I found that Godot 4.7.0 crashed the moment you answered a question
+with a screen reader running, which is why the project needs 4.7.2.
+
+## The architecture
+
+- **Engine.** Godot 4.7.2 and GDScript, with autoloads for settings, content,
+  spaced repetition, progress, sessions and display scaling.
+- **Logic.** Everything in `core/` is pure logic with no UI: the networking engines,
+  the IOS simulator, the grader and the mock exam's selection and scoring.
+- **Content.** Lessons, questions, drills and labs are all JSON, validated and
+  QA-checked in Python.
+- **Tests.** 244 GUT tests, an end-to-end smoke test that plays a daily session and a
+  quick mock, and a layout test that opens every screen, question, lesson and lab at
+  two window sizes and fails if anything runs off the edge.
+- **CI.** GitHub Actions runs the tests, the content checks, the acronym check and a
+  zero-warnings gate, and fails if the tests leave orphan nodes behind.
+- **Web build.** Exported on every push, about 12 MB gzipped, with progress saved to
+  IndexedDB. Smaller windows get a smaller canvas instead of shrunken text, so it
+  stays readable on a phone held sideways.
+
+There are still gaps. Screen readers don't work in the web build, because Godot's web
+export doesn't support them, and I haven't tested on-screen keyboards on a real phone
+or screen readers on Windows and macOS. I wrote up how the whole thing came together
+in [From Skeleton to Mock Exam](/blog/rapidccna-in-one-evening).
