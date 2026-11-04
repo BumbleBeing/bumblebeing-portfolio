@@ -6,6 +6,7 @@ tools: [Godot 4, GDScript, Game Design, Graphic Design, UI Design, AI Opponents]
 date: 2026-01-20
 repo: https://github.com/BumbleBeing/Multi-Task-King
 play: /games/multi-task-king/index.html
+images: [/multi-task-king/thumb.webp]
 ---
 
 A digital port of a board game I designed about modern attention overload. Everyone
