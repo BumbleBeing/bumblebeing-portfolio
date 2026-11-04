@@ -19,7 +19,7 @@
 				src={project.images[0]}
 				alt=""
 				loading="lazy"
-				class="aspect-video w-full rounded-md object-cover shadow-soft"
+				class="aspect-video w-full rounded-md bg-white object-contain shadow-soft"
 			/>
 		{:else}
 			<PlaceholderTile title={project.title} tag={project.tags[0]} />
