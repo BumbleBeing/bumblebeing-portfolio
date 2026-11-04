@@ -46,7 +46,7 @@
 	<!-- No mt-auto: the chips follow the Blurb rather than being pushed to the
 		foot of the card, so a card beside a taller one does not strand its chips
 		at the bottom with a gap above them. -->
-	<div class="flex flex-wrap gap-2 pt-1">
+	<div class="flex flex-wrap justify-center gap-2 pt-1">
 		{#each project.tools as tool (tool)}
 			<Chip label={tool} />
 		{/each}
