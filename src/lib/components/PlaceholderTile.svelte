@@ -6,10 +6,12 @@
 		title: string;
 		/** Drives the tint, so the grid shows at a glance which Projects are ML. */
 		tag?: Tag;
+		/** Art layered over the honeycomb in place of the initial, ideally with a transparent background. */
+		image?: string;
 		class?: string;
 	}
 
-	let { title, tag, class: className }: Props = $props();
+	let { title, tag, image, class: className }: Props = $props();
 
 	const initial = $derived(title.trim().charAt(0).toUpperCase() || '?');
 
@@ -43,5 +45,9 @@
 		className
 	)}
 >
-	<span class="font-display text-5xl font-bold opacity-70">{initial}</span>
+	{#if image}
+		<img src={image} alt="" loading="lazy" class="h-[88%] w-auto object-contain drop-shadow-soft" />
+	{:else}
+		<span class="font-display text-5xl font-bold opacity-70">{initial}</span>
+	{/if}
 </div>

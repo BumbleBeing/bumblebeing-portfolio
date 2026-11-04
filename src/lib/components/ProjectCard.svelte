@@ -14,16 +14,9 @@
 
 <Card href={resolve('/projects/[slug]', { slug: project.slug })}>
 	<div class="thumb-frame">
-		{#if project.images.length > 0}
-			<img
-				src={project.images[0]}
-				alt=""
-				loading="lazy"
-				class="aspect-video w-full rounded-md bg-white object-contain shadow-soft"
-			/>
-		{:else}
-			<PlaceholderTile title={project.title} tag={project.tags[0]} />
-		{/if}
+		<!-- The first image sits on the tag-tinted honeycomb in place of the
+			initial, so art with a transparent background reads as part of the tile. -->
+		<PlaceholderTile title={project.title} tag={project.tags[0]} image={project.images[0]} />
 	</div>
 
 	<!-- The colored category chip sits across from the title so the category
