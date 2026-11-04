@@ -26,7 +26,16 @@
 		{/if}
 	</div>
 
-	<h3 class="font-display text-lg font-semibold">{project.title}</h3>
+	<!-- The colored category chip sits across from the title so the category
+		reads at the same glance as the name; tool chips stay at the foot. -->
+	<div class="flex items-start justify-between gap-3">
+		<h3 class="font-display text-lg font-semibold">{project.title}</h3>
+		<div class="flex shrink-0 flex-wrap justify-end gap-2 pt-0.5">
+			{#each project.tags as tag (tag)}
+				<Chip {tag} label={tag} />
+			{/each}
+		</div>
+	</div>
 	<p class="text-sm text-ink-muted">{project.blurb}</p>
 
 	{#if project.credit}
@@ -38,9 +47,6 @@
 		foot of the card, so a card beside a taller one does not strand its chips
 		at the bottom with a gap above them. -->
 	<div class="flex flex-wrap gap-2 pt-1">
-		{#each project.tags as tag (tag)}
-			<Chip {tag} label={tag} />
-		{/each}
 		{#each project.tools as tool (tool)}
 			<Chip label={tool} />
 		{/each}
