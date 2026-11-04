@@ -5,6 +5,7 @@ tags: [web]
 tools: [Python, FastAPI, PostgreSQL, SvelteKit, TypeScript, Claude API]
 date: 2026-09-22
 site: https://www.boostertutor.dev
+images: [/booster-tutor/wizard.webp]
 ---
 
 BoosterTutor is a coach for Magic: the Gathering Limited. You draft against a table
