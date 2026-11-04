@@ -87,6 +87,23 @@ The drifting particles that wander the viewport and avoid the cursor. The reader
 turn them off, and that choice persists.
 _Avoid_: Particles, dots, sprites, insects, flies
 
+**Smoke**:
+The puffs the reader blows from the cursor by holding the mouse button over the
+Honeycomb. Pushes Bees, Swarming or not, and the Queen away, farther than the
+cursor alone does.
+_Avoid_: Fog, mist, cloud, particles
+
+**Queen**:
+The large, slow, crowned bee the reader summons with a double-click on the
+Honeycomb. Only one exists at a time; a new one replaces her. She fades after a
+short while and the Bees return to normal.
+_Avoid_: Queen bee, boss, leader, big bee
+
+**Swarming**:
+The state of a Bee drawn to the Queen, flying around her instead of drifting to the
+edges. Ends when she does.
+_Avoid_: Following, orbiting, attracted, recruited
+
 **Buzz**:
 The short burst of dots around a header button under hover or keyboard focus.
 Belongs to the header alone and is unrelated to the Bees.

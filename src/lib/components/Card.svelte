@@ -20,7 +20,9 @@
 {#if href}
 	<!-- Generic primitive: resolution is the caller's job. See Button.svelte. -->
 	<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
-	<a {href} class={cn(base, interactive, 'no-underline', className)}>{@render children()}</a>
+	<a {href} data-card class={cn(base, interactive, 'no-underline', className)}
+		>{@render children()}</a
+	>
 {:else}
-	<div class={cn(base, className)}>{@render children()}</div>
+	<div data-card class={cn(base, className)}>{@render children()}</div>
 {/if}
