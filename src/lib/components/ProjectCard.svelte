@@ -13,16 +13,18 @@
 </script>
 
 <Card href={resolve('/projects/[slug]', { slug: project.slug })}>
-	{#if project.images.length > 0}
-		<img
-			src={project.images[0]}
-			alt=""
-			loading="lazy"
-			class="aspect-video w-full rounded-md object-cover shadow-soft"
-		/>
-	{:else}
-		<PlaceholderTile title={project.title} tag={project.tags[0]} />
-	{/if}
+	<div class="thumb-frame">
+		{#if project.images.length > 0}
+			<img
+				src={project.images[0]}
+				alt=""
+				loading="lazy"
+				class="aspect-video w-full rounded-md object-cover shadow-soft"
+			/>
+		{:else}
+			<PlaceholderTile title={project.title} tag={project.tags[0]} />
+		{/if}
+	</div>
 
 	<h3 class="font-display text-lg font-semibold">{project.title}</h3>
 	<p class="text-sm text-ink-muted">{project.blurb}</p>
