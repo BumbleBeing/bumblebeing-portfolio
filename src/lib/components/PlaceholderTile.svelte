@@ -46,7 +46,14 @@
 	)}
 >
 	{#if image}
-		<img src={image} alt="" loading="lazy" class="h-[88%] w-auto object-contain drop-shadow-soft" />
+		<!-- drop-shadow follows the art's alpha, so the shadow traces the figure
+			rather than its box. Offset in rem so it scales with the tile. -->
+		<img
+			src={image}
+			alt=""
+			loading="lazy"
+			class="h-[88%] w-auto translate-x-[0.3125rem] object-contain [filter:drop-shadow(0_0.125rem_0.125rem_var(--shadow-text))_drop-shadow(0_0.375rem_0.5rem_var(--shadow-spread))]"
+		/>
 	{:else}
 		<span class="font-display text-5xl font-bold opacity-70">{initial}</span>
 	{/if}
