@@ -43,10 +43,10 @@
 		<p class="text-xs text-ink-muted italic">{project.credit}</p>
 	{/if}
 
-	<!-- No mt-auto: the chips follow the Blurb rather than being pushed to the
-		foot of the card, so a card beside a taller one does not strand its chips
-		at the bottom with a gap above them. -->
-	<div class="flex flex-wrap justify-center gap-2 pt-1">
+	<!-- When a taller neighbor stretches the card, the chips take the leftover
+		space and center in it, rather than hugging the Blurb or being stranded at
+		the foot. -->
+	<div class="flex flex-1 flex-wrap content-center items-center justify-center gap-2 pt-1">
 		{#each project.tools as tool (tool)}
 			<Chip label={tool} />
 		{/each}
