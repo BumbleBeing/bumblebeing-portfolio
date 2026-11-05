@@ -26,7 +26,9 @@
 	<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 	<div
 		class={cn(
-			'flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain pb-2',
+			// center-safe centers a lone image but falls back to start once the strip
+			// overflows, so the first image is never clipped out of scroll reach.
+			'flex snap-x snap-mandatory justify-center-safe gap-4 overflow-x-auto overscroll-x-contain pb-2',
 			className
 		)}
 		tabindex="0"
@@ -34,12 +36,16 @@
 		aria-label="{title} screenshots"
 	>
 		{#each images as image, index (image)}
-			<img
-				src={image}
-				alt="{title}, screenshot {index + 1} of {images.length}"
-				loading={index === 0 ? 'eager' : 'lazy'}
-				class="w-full max-w-md shrink-0 snap-center rounded-md border border-border shadow-soft"
-			/>
+			<!-- The same honeycomb frame as the Card Thumbnail, capped so a tall
+				image can't push the title off the first screen. -->
+			<div class="thumb-frame max-w-full shrink-0 snap-center">
+				<img
+					src={image}
+					alt="{title}, screenshot {index + 1} of {images.length}"
+					loading={index === 0 ? 'eager' : 'lazy'}
+					class="block h-auto max-h-80 w-auto max-w-full rounded-md shadow-soft sm:max-w-md"
+				/>
+			</div>
 		{/each}
 	</div>
 {/if}

@@ -5,6 +5,8 @@ tags: [game]
 tools: [Godot 4.7, GDScript, Python, GUT, GitHub Actions]
 date: 2026-11-03
 repo: https://github.com/BumbleBeing/LearnNetworking
+images: [/rapidccna/thumb.webp]
+fullBleed: true
 ---
 
 RapidCCNA is a study game for the Cisco CCNA 200-301 exam, built in Godot 4. It lives

@@ -6,7 +6,7 @@ tags: [web]
 ---
 
 <img
-	src="/booster-tutor/gnarl-edgibel.webp"
+	src="/booster-tutor/gnarl-edgibel-bg.webp"
 	alt="Gnarl Edgibel, a mouthless cartoon wizard in a periwinkle robe and hat, pointing one finger up"
 	width="800"
 	height="999"

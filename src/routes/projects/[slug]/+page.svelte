@@ -13,6 +13,10 @@
 	<BackButton href={resolve('/projects')}>Back to projects</BackButton>
 
 	<header class="flex flex-col items-center gap-3 text-center">
+		<!-- The images lead the page, centered over the title, so the project is
+			seen before it is described. -->
+		<ImageStrip images={project.images} title={project.title} class="mb-2 w-full" />
+
 		<h1 class="font-display text-3xl font-bold sm:text-4xl">{project.title}</h1>
 
 		<div class="flex flex-wrap items-center justify-center gap-2">
@@ -67,15 +71,9 @@
 		</div>
 	</header>
 
-	<!--
-		The body's first paragraph lands above the gallery on purpose: the page should
-		open with what the project is, not with an unlabelled screenshot.
-	-->
 	<div class="writeup-body prose max-w-none text-ink prose-headings:font-display">
 		{#if Body}
 			<Body />
 		{/if}
 	</div>
-
-	<ImageStrip images={project.images} title={project.title} />
 </article>

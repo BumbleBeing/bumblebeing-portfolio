@@ -8,10 +8,12 @@
 		tag?: Tag;
 		/** Art layered over the honeycomb in place of the initial, ideally with a transparent background. */
 		image?: string;
+		/** The image is a full screenshot: it fills the tile and the Honeycomb is not drawn. */
+		fullBleed?: boolean;
 		class?: string;
 	}
 
-	let { title, tag, image, class: className }: Props = $props();
+	let { title, tag, image, fullBleed = false, class: className }: Props = $props();
 
 	const initial = $derived(title.trim().charAt(0).toUpperCase() || '?');
 
@@ -36,25 +38,37 @@
 	project's initial. Decorative, so it is hidden from assistive tech — the
 	Card's own title is the accessible name.
 -->
-<div
-	aria-hidden="true"
-	class={cn(
-		'flex aspect-video w-full items-center justify-center rounded-md honeycomb shadow-soft',
-		'[--c1:var(--tile-ground)] [--c2:color-mix(in_oklab,var(--tile-ink)_12%,var(--tile-ground))] [--s:22px]',
-		tint,
-		className
-	)}
->
-	{#if image}
-		<!-- drop-shadow follows the art's alpha, so the shadow traces the figure
+{#if image && fullBleed}
+	<!-- Cropped to the tile's 16:9 rather than letterboxed, so every Card in a row
+		keeps the same height and no ground shows at the edges. -->
+	<img
+		src={image}
+		alt=""
+		aria-hidden="true"
+		loading="lazy"
+		class={cn('aspect-video w-full rounded-md object-cover shadow-soft', className)}
+	/>
+{:else}
+	<div
+		aria-hidden="true"
+		class={cn(
+			'flex aspect-video w-full items-center justify-center rounded-md honeycomb shadow-soft',
+			'[--c1:var(--tile-ground)] [--c2:color-mix(in_oklab,var(--tile-ink)_12%,var(--tile-ground))] [--s:22px]',
+			tint,
+			className
+		)}
+	>
+		{#if image}
+			<!-- drop-shadow follows the art's alpha, so the shadow traces the figure
 			rather than its box. Offset in rem so it scales with the tile. -->
-		<img
-			src={image}
-			alt=""
-			loading="lazy"
-			class="h-[88%] w-auto translate-x-[0.3125rem] object-contain [filter:drop-shadow(0_0.125rem_0.125rem_var(--shadow-text))_drop-shadow(0_0.375rem_0.5rem_var(--shadow-spread))]"
-		/>
-	{:else}
-		<span class="font-display text-5xl font-bold opacity-70">{initial}</span>
-	{/if}
-</div>
+			<img
+				src={image}
+				alt=""
+				loading="lazy"
+				class="h-[88%] w-auto translate-x-[0.3125rem] object-contain [filter:drop-shadow(0_0.125rem_0.125rem_var(--shadow-text))_drop-shadow(0_0.375rem_0.5rem_var(--shadow-spread))]"
+			/>
+		{:else}
+			<span class="font-display text-5xl font-bold opacity-70">{initial}</span>
+		{/if}
+	</div>
+{/if}

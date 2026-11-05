@@ -23,21 +23,21 @@ cards do something in addition to their raw stats.
 
 <div class="card-row">
 	<img
-		src="/multi-task-king/get-a-massage.webp"
+		src="/multi-task-king/get-a-massage-bg.webp"
 		alt="Get a Massage activity card: 4 duration, 1 dopamine, doubles the dopamine of every action taken this turn"
 		width="600"
 		height="840"
 		loading="lazy"
 	/>
 	<img
-		src="/multi-task-king/go-shopping.webp"
+		src="/multi-task-king/go-shopping-bg.webp"
 		alt="Go Shopping activity card: 4 duration, 1 dopamine, plus 3 dopamine if you have taken 3 or more actions this turn"
 		width="600"
 		height="840"
 		loading="lazy"
 	/>
 	<img
-		src="/multi-task-king/spread-rumors.webp"
+		src="/multi-task-king/spread-rumors-bg.webp"
 		alt="Spread Rumors activity card: 3 duration, 1 dopamine, another player gets minus 2 dopamine"
 		width="600"
 		height="840"
@@ -65,21 +65,21 @@ whenever you do either of two specific activities.
 
 <div class="card-row">
 	<img
-		src="/multi-task-king/cinema-buff.webp"
+		src="/multi-task-king/cinema-buff-bg.webp"
 		alt="Cinema Buff role card: whenever you Watch a Film or Binge-Watch Shows, you get plus 3 dopamine"
 		width="600"
 		height="840"
 		loading="lazy"
 	/>
 	<img
-		src="/multi-task-king/easygoer.webp"
+		src="/multi-task-king/easygoer-bg.webp"
 		alt="Easygoer role card: whenever you Daydream or Get a Massage, you get plus 2 attention"
 		width="600"
 		height="840"
 		loading="lazy"
 	/>
 	<img
-		src="/multi-task-king/space-cadet.webp"
+		src="/multi-task-king/space-cadet-bg.webp"
 		alt="Space Cadet role card: whenever you Smoke Up or Get Wasted, you get plus 2 attention"
 		width="600"
 		height="840"

@@ -15,8 +15,14 @@
 <Card href={resolve('/projects/[slug]', { slug: project.slug })}>
 	<div class="thumb-frame">
 		<!-- The first image sits on the tag-tinted honeycomb in place of the
-			initial, so art with a transparent background reads as part of the tile. -->
-		<PlaceholderTile title={project.title} tag={project.tags[0]} image={project.images[0]} />
+			initial, so art with a transparent background reads as part of the tile.
+			A fullBleed screenshot fills the tile instead. -->
+		<PlaceholderTile
+			title={project.title}
+			tag={project.tags[0]}
+			image={project.thumbnail ?? project.images[0]}
+			fullBleed={project.fullBleed}
+		/>
 	</div>
 
 	<!-- The colored category chip sits across from the title so the category

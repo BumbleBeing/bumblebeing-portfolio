@@ -71,7 +71,18 @@ export const projectSchema = z.object({
 	/** Collaboration disclosure, e.g. "Team project — UC Davis ECS 171". */
 	credit: z.string().min(1).optional(),
 	/** Empty until real screenshots exist; the gallery renders nothing when empty. */
-	images: z.array(z.string().min(1)).default([])
+	images: z.array(z.string().min(1)).default([]),
+	/**
+	 * The Card's Thumbnail when it should differ from the first image: cut-out art
+	 * with a transparent background reads best on the Card's tinted Honeycomb,
+	 * while the page shows a version on a solid ground. Falls back to images[0].
+	 */
+	thumbnail: z.string().startsWith('/').optional(),
+	/**
+	 * The first image is a full screenshot rather than cut-out art, so the
+	 * Thumbnail shows it edge to edge with no Honeycomb around it.
+	 */
+	fullBleed: z.boolean().default(false)
 });
 
 export const postSchema = z.object({

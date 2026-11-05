@@ -3,6 +3,7 @@ import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vitest/config';
 import adapter from '@sveltejs/adapter-vercel';
 import { sveltekit } from '@sveltejs/kit/vite';
+import { frameImages } from './src/lib/content/frame-images';
 
 export default defineConfig({
 	plugins: [
@@ -21,7 +22,7 @@ export default defineConfig({
 				// exists in each collection, so "unseen" here means "empty", not "wrong".
 				handleUnseenRoutes: 'warn'
 			},
-			preprocess: [mdsvex({ extensions: ['.svx'] })],
+			preprocess: [mdsvex({ extensions: ['.svx'], remarkPlugins: [frameImages] })],
 			extensions: ['.svelte', '.svx']
 		})
 	],
