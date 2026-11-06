@@ -1,0 +1,221 @@
+---
+title: A modular Magic engine
+blurb: Nine milestones in one night, from an empty Godot project to a Magic rules engine with combat, triggers and layers, built so players can rewrite their own cards.
+date: 2026-11-06
+tags: [game]
+---
+
+I've had an idea kicking around for a while: a roguelike where your deck is made of
+Magic: the Gathering cards, and the cards you earn along the way can be changed. Win a
+fight and maybe your Lightning Bolt costs nothing now, or your Grizzly Bears pick up
+flying, or a spell that hits one creature starts hitting all of them. The game is
+called [ModMox](/projects/modmox), and before any of the roguelike part can exist, it
+needs something that can actually play Magic. So last night I started on the rules
+engine, and by sunrise it was nine milestones in.
+
+The repo's first commit landed a little before 10 p.m. under the name MoxFort, which
+lasted about an hour before I renamed it. The ninth milestone finished at quarter to
+six in the morning. Here's how the night went, and the two decisions that shaped
+everything else.
+
+## The decision that came first
+
+Before writing any engine code, I wrote down eleven design decisions, and the first
+one is the reason the rest of this post looks the way it does.
+
+The tempting way to build a card game is to write each card as its own little script.
+That works fine until players can modify cards, at which point you're dealing with
+cards nobody wrote. A Lightning Bolt with an extra target, or a creature that gained
+an ability it was never designed to have, has to behave correctly without me
+anticipating it. The only thing I trust to keep those combinations predictable is the
+actual structure of Magic's Comprehensive Rules: priority, the stack, state-based
+actions, the layer system, replacement effects, all of it.
+
+So the engine follows that structure from day one, even though the card pool is a
+handful of Alpha cards. Scope gets cut by leaving out entire mechanics, never by
+simplifying the architecture. If no card in the game has a mechanic yet, its rules
+don't get written, but the shape of the engine has to leave room for them.
+
+The flip side is that cards are pure data. Every card is a Godot Resource built from
+a fixed library of primitives, and every number in an ability is a composable Value,
+so "deal 3 damage" can become "deal damage equal to the number of Goblins you control"
+with no new code. A card the player owns is stored as an untouched base card plus an
+ordered list of Modifications, and the engine flattens it at the start of each fight.
+If a card can't be built from the primitives, the answer is a new primitive, never a
+one-off script. That's the "modular" part, and it's what the whole game will lean on.
+
+The engine follows current rules and current Oracle wording, even for cards from
+1993. That means no mana burn and no damage assignment order. If I ever want one of
+those back for flavor, it comes in as a named house rule, kept out of the core.
+
+## Milestone 1: the skeleton
+
+The first milestone was setup. The engine lives in its own Godot addon,
+`addons/modmox_rules/`, that never references the game, so it can run headless and
+be tested on its own. It got the GUT test framework, a single `tools/test.sh` command
+that runs everything from the command line, and enforced static typing, where any
+untyped declaration is a compile error.
+
+That last one had a small catch. Godot quietly excludes everything under `addons/`
+from its warnings by default, which means my strict typing rules would have skipped
+the one folder I most wanted them on. The engine folder is explicitly included again
+now, and there's a test that fails if anyone ever undoes that.
+
+## Milestone 2: state and the pregame
+
+Milestone 2 built the bones of a game: players, all seven zones, and game objects.
+Following CR 400.7, a card that changes zones becomes a brand new object with a new
+ID. It sounds like pedantry, but it's what makes "exile that creature at end of turn"
+correctly do nothing if the creature died and came back in the meantime, and it's
+notoriously painful to retrofit.
+
+This is also where the event pipeline went in. No rules code ever changes the game
+directly. Every change is proposed as an event, offered to replacement effects,
+applied, and logged, even though there were no replacement effects or triggers yet.
+Retrofitting that would have meant rewriting every rule that touches the state.
+
+The pregame came along with it: a coin flip, the play or draw choice, London
+mulligans with ordered bottoming, and Free Mulligans, which a character in the
+roguelike might earn. I also tracked down a memory leak caused by a reference cycle
+between game objects and their zones. The suite went from 4 tests to 51.
+
+## The decision that makes saves easy
+
+Milestone 2 is also where the second big decision first showed up in code. The engine never waits for
+input. Whenever a player has a choice, it stops and hands back a Pending Decision
+listing the legal options, then picks back up when it gets an answer. The GUI and the
+AI answer exactly the same decisions, and neither one ever reaches into the engine.
+
+Combine that with determinism and you get some nice things for free. Every encounter
+is fully reproducible from its setup, including a random seed, plus the answers given.
+There are two separate random streams, one for the game and one for the AI, so tuning
+the AI never changes a shuffle, and an AI looking ahead can't predict the real deck
+order.
+
+That means a mid-fight save is just the setup and the list of answers, and loading
+it replays them. I considered saving the whole game state, but every new class would
+have had to stay in sync with the save format forever. The tradeoff is that an engine
+update can invalidate a save from the middle of a fight, and for a roguelike,
+restarting that one fight is a fair price. It also makes reloading useless for
+rerolling bad draws, since the shuffle comes out the same every time.
+
+## Milestone 3: turns and priority
+
+Milestone 3 added every phase and step of a turn and priority passing, with no cards
+at all yet. The starting player skips their first draw, the blockers and damage steps
+get skipped when nobody attacks, and cleanup makes you discard down to your maximum
+hand size.
+
+The interesting choice here was how to answer a priority decision. Each one lists
+every legal Action in a fixed order, and the answer is just an index into that list.
+I considered answering with the Action's data, like "cast object 15," but that needs a
+second set of validation rules that must always agree with the legality checks.
+With an index, validation is a bounds check, and an illegal play can't even be
+written down. At this point the only Action that existed was passing, which made for
+some very polite games.
+
+## Milestone 4: lands and mana
+
+Milestone 4 brought the five basic lands, playing a land, tapping for mana, and the
+mana pool emptying between steps. Basic lands don't actually have a mana ability
+written on them. The engine grants it from the land's subtype, the way CR 305.6 does,
+so an effect that turns a Forest into an Island will change what it taps for with no
+special handling.
+
+The mana pool holds individual units of mana instead of a count per color. Each unit
+records its type and where it came from, because later cards care about things like
+"spend this only on creature spells" or "whenever you tap a land for mana," and a
+count can't carry that.
+
+## Milestone 5: casting and the stack
+
+Milestone 5 was the biggest so far. It added costs, targets, Filters, Values, spells
+resolving off the stack, and spells fizzling when their targets disappear. The first
+real spells were Lightning Bolt, Ancestral Recall and Dark Ritual. Colors now come
+from the mana cost instead of being set by hand, and the same characteristics work
+outside a fight, so the deck screen and the battlefield can never disagree about a
+card.
+
+It also added undo. You can take back recent choices, like tapping the wrong land or
+starting a spell you didn't mean to cast, up to the last point where taking it back
+wouldn't be fair, such as after a card was drawn or the other player got a decision.
+The engine keeps a checkpoint copy of the state at each of those points, and undoing
+restores the checkpoint and replays the few decisions since. Replaying the whole fight
+from the start would have worked, but people undo several times in a row when
+untapping lands. Writing an exact reverse for every kind of event was the other
+option, and that's the kind of hand-written logic that quietly drifts out of date.
+
+## Milestone 6: creatures and combat
+
+Milestone 6 brought creatures: Grizzly Bears, Hill Giant and Elvish Archers. That
+meant power and toughness, summoning sickness, attacking, blocking, combat damage,
+and the keywords first strike, double strike, trample and flash. Following current
+rules, an attacker blocked by several creatures divides its damage however it likes
+instead of in a set order.
+
+Declaring attackers didn't fit the index-into-a-list idea, since you'd need an
+option for every possible group of attackers. Those decisions are answered with plain
+lists instead, like the IDs of the attacking creatures or one damage amount per
+blocker, and each entry is still checked against the candidates.
+
+This was also the milestone where I started deliberately breaking the rules. After
+everything passes, I change a rule in the engine on purpose and make sure some test
+fails. The 225 tests caught all 18 of those mutations. The funny part is that
+creatures could fight but not die yet, since that's a state-based action, and those
+were next.
+
+## Milestone 7: state-based actions
+
+Milestone 7 made things lethal. The engine now checks state-based actions every time
+a player would receive priority, performs everything that applies at once, and
+repeats until nothing does. Players lose at 0 life or after drawing from an empty
+library, and creatures die from lethal damage or 0 toughness. Fights can end in a
+win or a draw, and you can concede at any time, which goes into the decision log so
+it replays too.
+
+The milestone 6 tests needed updating, because creatures that had been surviving
+lethal damage were now, correctly, dying. Thirteen of sixteen rule mutations were
+caught, and the other three turned out to behave identically under the current rules.
+
+## Milestone 8: triggered abilities
+
+Milestone 8 added triggered abilities, with Ankh of Mishra, Howling Mine and Ivory
+Tower as the first artifacts. Triggers fire at the beginning of a step, when
+something changes zones, or when a spell is cast, and "intervening if" clauses get
+checked both when the ability triggers and when it resolves.
+
+The tricky part was timing. I first considered scanning the event log only when
+someone would receive priority, but by then the board has moved on, and a creature
+that left the battlefield in between would miss its own trigger. Instead, triggers
+are detected right after each event, or each batch of simultaneous events, like all
+the combat damage in a step. Leaves-the-battlefield triggers look back in time, so a
+creature that dies alongside others sees all of them die, including itself. Every
+other trigger looks at the game after the batch. That needed last-known information,
+so a creature's characteristics get frozen as it leaves. This milestone also added
+Emblems, which is how the roguelike's boss rules and character Statuses will reach
+the engine without it ever knowing those exist.
+
+## Milestone 9: static abilities and layers
+
+The last milestone of the night was the layer system, the part of Magic's rules that
+decides what a creature actually is once a bunch of effects pile up. The first cards
+to use it were Giant Growth, Crusade, Serra Angel, Giant Spider, Wall of Stone and
+Keldon Warlord, along with flying, reach, vigilance, haste, deathtouch and defender.
+
+The engine works out every object on the battlefield at once, one layer at a time,
+because that's how the rules actually work. A filter like "creatures with flying get
++1/+1" has to see the result of earlier layers, and computing one object at a time
+would either get that wrong or recurse forever. The result is cached until the next
+event, and since every change is an event, throwing the cache away there is always
+correct. Timestamps turned out to be free, too. Every object entering the battlefield
+gets the next ID, so an object's ID already is its timestamp. The 321 tests caught all
+24 rule mutations.
+
+## Where it stands
+
+By morning the engine could play a real, if small, game of Alpha-era Magic, with
+eighteen decision records explaining why it works the way it does. Next up is
+replacement and prevention effects, and after that the first playable slice of Alpha
+against a simple AI. There's no GUI yet, and none of the roguelike exists. But the
+part I was most worried about, whether a modified card would still behave like a real
+Magic card, finally feels like it has solid ground under it.

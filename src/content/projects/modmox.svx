@@ -1,0 +1,98 @@
+---
+title: ModMox
+blurb: A Magic rules engine in Godot, built to the Comprehensive Rules so a roguelike can let players rewrite their own cards.
+tags: [game]
+tools: [Godot 4.7.2, GDScript, GUT]
+date: 2026-11-06
+repo: https://github.com/BumbleBeing/ModMox
+---
+
+ModMox is going to be a roguelike RPG where you fight your way through a run with a
+deck of Magic: the Gathering cards, and the cards you earn along the way can be
+changed. A spell might lose a point of its cost, a creature might pick up flying, a
+burn spell might stop targeting and hit everything instead. Right now the work is the
+part that makes all of that possible: a rules engine for Magic, written in GDScript as
+a self-contained Godot addon that knows nothing about the game around it.
+
+Nine milestones in, the engine handles the pregame and London mulligans, every phase
+and step of a turn, priority and the stack, lands and mana, casting with targets,
+combat with first strike, double strike and trample, state-based actions, triggered
+abilities and the layer system for static abilities. The current card pool is
+twenty cards from Alpha, from Grizzly Bears and Lightning Bolt to Serra Angel
+and Crusade, and every one of them is plain data.
+
+## Why follow the real rules
+
+The obvious way to build a card game is to write each card as a little script. That
+falls apart the moment players can modify cards, because a modified card is a card
+nobody wrote. So the engine follows the actual structure of the Comprehensive Rules
+from the start, priority, the stack, state-based actions, layers with timestamps and
+replacement effects, even though the card pool is tiny. Scope gets cut by leaving out
+whole mechanics, never by simplifying the architecture, and a rule that only matters
+for one mechanic isn't written until a card needs it.
+
+It follows current rules and current Oracle wording, even for Alpha cards. There's no
+mana burn and no damage assignment order. If I ever want an old rule back for flavor,
+it comes in as a named house rule rather than mixed into the core. Encounters are
+always one on one, and there will never be planeswalkers.
+
+## Cards are data
+
+Card Definitions are Godot Resources assembled from a fixed library of primitives:
+costs, effects, triggers, static abilities, Values, Filters and Selections. Every
+number in an ability is a Value, so "deal 3 damage" can become "deal damage equal to
+the number of Goblins you control" without new code. Every effect reaches its
+targets through a Selection, so turning "target creature" into "each creature" is a
+data change too. If a card can't be built from the primitives, the fix is to add a
+primitive, not to script the card.
+
+Rules classifications are worked out from a card's contents instead of being set by
+hand. Whether an ability is a mana ability follows CR 605.1a, so a modification that
+adds a target to `{T}: Add {R}` correctly turns it into an ability that uses the
+stack. A card the player has earned is stored as an untouched base definition plus an
+ordered list of Modifications, and the engine flattens it at the start of each
+encounter into a printed card that simply is what it is.
+
+## Decisions, replays and undo
+
+The engine never waits for input. Whenever someone has a choice, it stops and returns
+a Pending Decision listing the legal options, and it resumes when it gets an answer.
+The GUI and the AI answer exactly the same decisions, which keeps everything testable
+headless. Priority is answered with an index into the list of legal Actions, so an
+illegal play can't even be expressed.
+
+Every encounter is deterministic from its setup and seed, with separate random number
+streams for the game and the AI so that tuning the AI never changes a shuffle. That
+means a mid-encounter save is just the setup plus the list of answers, and loading
+it replays them. Undo works the same way. The engine keeps a checkpoint at each point
+where taking something back would be unfair, like a card being drawn, and undoing
+restores the checkpoint and replays the few decisions since.
+
+## How it's tested
+
+Each milestone starts by agreeing on its scope and test scenarios, gets built
+test-first with GUT, and isn't done until everything is green. The suite is at 321
+tests, run headless from one script, with a check for leaked objects. To make sure the
+tests actually pin the rules down, I break the rules on purpose at the end of each
+milestone and count how many of those mutations the suite catches. Milestone 9 caught
+all 24.
+
+## The architecture
+
+- **Engine.** `addons/modmox_rules/`, built from `RefCounted` and `Resource` classes
+  with no scene tree dependency, and no game content inside it.
+- **Content.** Card Definitions live game-side in `content/cards/` as `.tres` files,
+  with a test that checks no two cards share a sub-resource.
+- **Events.** Every change to the game goes through one pipeline: proposed, offered
+  to replacement effects, applied, logged, then checked for triggers.
+- **Layers.** Characteristics are always read through one query, and the layer engine
+  works out every object on the battlefield at once, layer by layer, and caches the
+  result until the next event.
+- **Typing.** Static typing is enforced everywhere, with untyped declarations treated
+  as compile errors, and a test fails if that setting is ever undone.
+- **Decision records.** Eighteen ADRs cover the engine's design, alongside a glossary
+  and a milestone roadmap.
+
+Next up is replacement and prevention effects, and after that the first playable
+slice of Alpha against a simple AI. I wrote up how the first nine milestones went in
+[A modular Magic engine](/blog/a-modular-magic-engine).
