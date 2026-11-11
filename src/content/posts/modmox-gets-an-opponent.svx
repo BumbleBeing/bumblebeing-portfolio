@@ -1,0 +1,182 @@
+---
+title: ModMox gets an opponent
+blurb: The rules engine learns to change events before they happen, an AI shows up to play against, and the whole thing finally gets a screen you can click on.
+date: 2026-11-11
+tags: [game]
+---
+
+When I [last wrote about ModMox](/blog/a-modular-magic-engine), the engine could play
+a small game of Alpha-era Magic with nobody watching and nobody on the other side of
+the table. There was no opponent, no screen, and the next thing on the to-do list was
+replacement and prevention effects. Five days later, all three of those are different.
+The engine got its tenth milestone, an functional AI has been implemented, and as of this morning I
+can sit down, attack with a Shivan Dragon, and watch the other side decide whether to
+chump block it.
+
+The work fell into four major chunks:
+
+## Changing things before they happen
+
+Milestone 10 landed the same morning the last post went up. It covers the corner of
+Magic where an effect doesn't react to something, it rewrites it. Fog doesn't undo
+combat damage, it makes the damage never happen. A regeneration shield doesn't bring a
+creature back, it swaps "destroy this" for "tap it and pull it out of combat." The
+first cards to use it were Fog, Samite Healer, White Knight, Black Knight, Drudge
+Skeletons and Terror.
+
+The good news was that the event pipeline from milestone 2 already had a slot for
+this. Every change to the game was already being offered to replacement effects before
+it applied, there just weren't any. Now that step can turn one event into none, one or
+several. Fully prevented damage becomes nothing at all, which matters, because damage
+that was never dealt can't trigger anything or carry deathtouch along with it.
+
+The bad news was the ordering rule. When two replacement effects want the same event,
+the affected player picks which goes first, and the engine never waits for input. That
+choice can come up halfway through a batch of simultaneous events, like the middle of
+combat damage. So a batch that needs an answer now stops where it is and gets stored
+in the game state as a Suspended Batch, and it carries on once the player answers.
+Making that work meant changing what an effect is. Effects used to perform their
+events directly. Now they only propose them, one batch per step, and a procedure walks
+through the proposals and can stop between any two. Because the suspended batch is
+part of the state, it gets copied and checkpointed like everything else, so undo works
+even in the middle of one.
+
+The engine also only asks when the order could matter. If there's one effect, or the
+effects are interchangeable, or they'd all prevent everything anyway, it quietly picks
+the oldest. Nobody wants a dialog asking which of two identical Fogs should go first.
+
+Protection came along in the same milestone, since "protection from black" is mostly a
+prevention effect with a Filter attached, plus indestructible and mana in activation
+costs. The suite reached 386 tests and caught 35 of 36 deliberate rule mutations. The
+one that got away was "each effect applies only once per event," which no card in the
+game can show the difference for yet.
+
+## Someone to play against
+
+Milestone 11 was the first playable slice: three 40-card decks and an AI to pilot
+them. The engine calls the two players the Hero and the Villain, and whatever answers
+decisions for one of them is an Agent. The AI lives in its own addon,
+`addons/modmox_ai/`, which depends on the engine and is never referenced by it.
+
+The design borrows from Forge, the long-running open source Magic client, whose AI is
+a big pile of heuristics, refined by simulation. I borrowed the ideas, but none of the
+code, since Forge is GPL. The more interesting difference is what I got to skip. Forge
+needs around 155 hand-written classes, one per kind of effect, to tell its AI what
+each effect does. ModMox, on the other hand, just asks the engine. The AI copies the game, tries a play on
+the copy, and scores the board that comes out. That means it has no card names in it
+and no authored hints, which is the whole point in a game where players rewrite cards.
+If your Lightning Bolt hits every creature now, the AI finds that out the same way it
+finds out everything else, by trying it.
+
+The part I cared most about was that the AI doesn't cheat. It never gets handed the
+real game. It gets what its player could legally see, plus a World, which is a copy of
+the game where every hidden card has been dealt out again at random. The Villain knows
+what could be in your hand, never what is. There's a test for this that I like a lot:
+set up two games that differ only in where the hidden cards are, and check that the AI
+sees exactly the same thing in both.
+
+Its randomness is careful in a similar way. Each decision gets a fresh random stream
+derived from the encounter's seed and how many decisions came before, because a save
+is only the setup plus the list of answers. A running stream would be lost on reload,
+the AI would answer differently the second time, and you could reload until it
+misplayed. Search budgets are counted in samples and never in milliseconds for the
+same reason. A fast machine and a slow one get the same Villain.
+
+Milestone 12 put Flat Monte Carlo on top. On a priority decision the AI takes its best
+few candidates and plays each one forward through the rest of the turn and all of the
+next, on the same set of imagined worlds, and it only switches away from its first
+instinct if another option clearly wins. Difficulty sets how much searching happens
+and nothing else. Easy doesn't search at all, Normal compares four candidates over
+four samples, and Hard uses twelve samples. A Normal decision takes a median of 358
+milliseconds. Difficulty never adds mistakes, and Villains never concede, because
+finishing someone off is part of the fun.
+
+Here's the honest part. I set a bar for this milestone: Normal had to beat Easy at
+least 55% of the time over 100 pairs of seeded games. It scored 52.5%, 105 wins to 95,
+which is statistically indistinguishable from a coin flip. Digging in, the search only
+changed the AI's mind in about 5% of decisions, and combat, where most of these games
+get decided, runs on the same planners at every difficulty. In 85 of the 100 pairs
+each side won once, so the deck matchup and who went first mattered more than who was
+thinking harder. I wrote the result down and moved on instead of tuning forever. The
+likely fix is letting the AI roll out its attack options too, and that can wait until
+there's a game around it.
+
+My favorite bug from this stretch was the AI casting Dark Ritual for no reason. Three
+black mana that empties unspent should score the same as doing nothing, but in a
+rollout it changed which lands were left untapped, and that nudged the score above
+passing. Now a spell that only makes mana is considered only if the mana unlocks
+something the AI couldn't already do.
+
+## What a card looks like
+
+With something to play against, milestone 13 is the GUI, and it's big enough that it's
+split into nine parts. The first was drawing cards.
+
+There are two ways a card gets drawn. A Card Face is the full card, with frame, name,
+cost, type line, rules text and power and toughness, used anywhere you read a card. A
+Battlefield Face is what a permanent looks like in play: the art, the name, a large
+power and toughness box, and a small chip for each keyword it has. Each chip shows a
+16 by 16 pixel icon, so you can tell a flier from a first striker at a glance. The
+icons are built from a text grid by a script, and can be touched up by hand in
+Aseprite afterward.
+
+The frames aren't images of finished cards. The game works out which layers a card
+needs from its characteristics, a frame for its colors, a box if it's a creature, a
+crown if it's legendary, and bakes them together. That matters for the same reason
+everything else here does. A card that gains a color mid-run has to get the right
+frame without anybody drawing one. Both kinds of face are drawn from one small object
+describing how the card currently looks, so the deck screen and the battlefield can't
+disagree. Art is the card's first printing, fetched by a script that records the
+artist credits as it goes.
+
+## A screen you can click
+
+The rest of the week went into the Encounter Screen. The rule that shaped it is that
+exactly one object in the GUI is allowed to touch the engine. That's the Encounter
+Presenter. It runs the encounter, and after every change it hands the screen a
+snapshot of what the Hero is allowed to see and what they're being asked. The screen
+draws from the snapshot and nothing else, so it can't accidentally show you the
+Villain's hand, because it never has it. A test scans the GUI code and fails if any
+other file so much as mentions the engine by name.
+
+The presenter also runs the Villain on a worker thread, since a Hard decision can take
+over a second and the window shouldn't freeze while it thinks. I learned why the
+ordering there matters from the throwaway prototype, which once read the game while
+the AI was halfway through recalculating layers and crashed on a half-computed
+creature. The real version takes its snapshot before the AI starts thinking and
+refuses every command until it's done. Pausing works the same way. Escape doesn't
+stop the Villain's thought, it just doesn't collect the answer until you resume.
+
+The first version of the screen answered every decision through a debug panel full of
+lists, which worked but was no fun at all. So each kind of decision is getting its own
+input mode, and a kind isn't finished until its debug form is deleted. What
+a click on anything means is worked out in one place, and the Glow, the colored
+outline on things you can choose, is drawn from that same answer. Orange-red is a
+target, blue is a mana source, green is anything else. Since both come from one
+source, something that glows always takes a click, and something that doesn't glow is
+silent instead of throwing an error at you.
+
+Combat was this morning's work, and it needed a different idea. Declaring attackers is
+one answer for the whole decision, so a single click can't be the answer. Clicks build
+up a Combat Selection instead, and the pass button turns into "Attack with 2" to
+confirm it. Attackers step forward into a lane across the middle of the board. A
+blocker gets a line with an arrowhead to whatever it's blocking, pale gold while
+you're choosing and white once it's locked in. I first had blockers slide over to
+stand opposite their attackers, but that fought with keeping creatures in a stable
+order, so the lines carry the pairing on their own. Dividing damage among several
+blockers gets a little minus and plus stepper on each creature, starting from a split
+that kills as many as it can.
+
+## Where it stands
+
+ModMox is now a game you can actually play a round of. The card pool is at 41 cards,
+there are 22 decision records, and the test count is somewhere around 870 across the
+engine, the AI and the GUI. Activating abilities, paying mana, targeting and all of
+combat have real inputs. Mulligans, casting from hand and a few others still go
+through the debug panel.
+
+Next is the stack, with arrows from spells to their targets and the first animations,
+along with slowing the Villain down so you can follow what it's doing. After that come
+dragging cards out of your hand, zone viewers, and a card inspector. None of the
+roguelike exists yet, but for the first time there's something on the other side of
+the table, and it's deciding whether to block.

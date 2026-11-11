@@ -1,6 +1,6 @@
 ---
 title: ModMox
-blurb: A Magic rules engine in Godot, built to the Comprehensive Rules so a roguelike can let players rewrite their own cards.
+blurb: A Magic rules engine in Godot, built to the Comprehensive Rules so a roguelike can let players rewrite their own cards, with an AI to play against.
 tags: [game]
 tools: [Godot 4.7.2, GDScript, GUT]
 date: 2026-11-06
@@ -11,15 +11,18 @@ ModMox is going to be a roguelike RPG where you fight your way through a run wit
 deck of Magic: the Gathering cards, and the cards you earn along the way can be
 changed. A spell might lose a point of its cost, a creature might pick up flying, a
 burn spell might stop targeting and hit everything instead. Right now the work is the
-part that makes all of that possible: a rules engine for Magic, written in GDScript as
-a self-contained Godot addon that knows nothing about the game around it.
+part that makes all of that possible: a rules engine for Magic, an AI that plays it,
+and a screen to play on. The engine is written in GDScript as a self-contained Godot
+addon that knows nothing about the game around it.
 
-Nine milestones in, the engine handles the pregame and London mulligans, every phase
+Twelve milestones in, the engine handles the pregame and London mulligans, every phase
 and step of a turn, priority and the stack, lands and mana, casting with targets,
 combat with first strike, double strike and trample, state-based actions, triggered
-abilities and the layer system for static abilities. The current card pool is
-twenty cards from Alpha, from Grizzly Bears and Lightning Bolt to Serra Angel
-and Crusade, and every one of them is plain data.
+abilities, the layer system for static abilities, and replacement and prevention
+effects. The current card pool is 41 cards from Alpha, from Grizzly Bears and
+Lightning Bolt to Serra Angel and Shivan Dragon, and every one of them is plain data.
+The thirteenth milestone is the GUI, which is far enough along that you can play an
+encounter against the AI by clicking on things.
 
 ## Why follow the real rules
 
@@ -39,12 +42,12 @@ always one on one, and there will never be planeswalkers.
 ## Cards are data
 
 Card Definitions are Godot Resources assembled from a fixed library of primitives:
-costs, effects, triggers, static abilities, Values, Filters and Selections. Every
-number in an ability is a Value, so "deal 3 damage" can become "deal damage equal to
-the number of Goblins you control" without new code. Every effect reaches its
-targets through a Selection, so turning "target creature" into "each creature" is a
-data change too. If a card can't be built from the primitives, the fix is to add a
-primitive, not to script the card.
+costs, effects, triggers, static abilities, replacement effects, Values, Filters and
+Selections. Every number in an ability is a Value, so "deal 3 damage" can become "deal
+damage equal to the number of Goblins you control" without new code. Every effect
+reaches its targets through a Selection, so turning "target creature" into "each
+creature" is a data change too. If a card can't be built from the primitives, the fix
+is to add a primitive, not to script the card.
 
 Rules classifications are worked out from a card's contents instead of being set by
 hand. Whether an ability is a mana ability follows CR 605.1a, so a modification that
@@ -68,19 +71,56 @@ it replays them. Undo works the same way. The engine keeps a checkpoint at each 
 where taking something back would be unfair, like a card being drawn, and undoing
 restores the checkpoint and replays the few decisions since.
 
+## An AI that doesn't cheat
+
+The AI is its own addon that depends on the engine and is never referenced by it. It
+holds no card names and no authored hints. To judge a play, it copies the game, tries
+the play on the copy, and scores the board that comes out, so a card a player has
+rewritten needs no new AI code. It never sees the real game either. It gets what its
+player could legally see, plus a copy in which every hidden card has been dealt out
+again at random, so it knows what could be in your hand and never what is.
+
+On top of its heuristics sits Flat Monte Carlo, which plays the best few candidates
+forward through the next turn on the same imagined worlds. Difficulty only sets how
+much it searches. It never adds mistakes, and search budgets are counted in samples
+instead of milliseconds, so the AI plays the same on any machine and after any reload.
+The search doesn't buy much strength yet. Normal beat Easy 52.5% of the time over 200
+games, short of the 55% I was aiming for, mostly because combat is planned the same
+way at every level.
+
+## The screen
+
+Exactly one object in the GUI is allowed to touch the engine. The Encounter Presenter
+runs the encounter, keeps the AI on a worker thread, and hands the screen a snapshot
+of what the player may see after every change. The screen draws from the snapshot and
+nothing else, so it can't leak a hidden card it was never given.
+
+Cards are drawn from their characteristics, with frames baked from layers, so a card
+that changes color mid-run gets the right frame without anyone drawing it. What a
+click means is worked out in one place, and the glow that marks what you can choose is
+drawn from the same answer. Activating abilities, paying mana, choosing targets and
+all three combat decisions have their own inputs. The rest still go through a
+temporary debug panel, and each one loses its debug form when its real input lands.
+
 ## How it's tested
 
 Each milestone starts by agreeing on its scope and test scenarios, gets built
-test-first with GUT, and isn't done until everything is green. The suite is at 321
-tests, run headless from one script, with a check for leaked objects. To make sure the
-tests actually pin the rules down, I break the rules on purpose at the end of each
-milestone and count how many of those mutations the suite catches. Milestone 9 caught
-all 24.
+test-first with GUT, and isn't done until everything is green. There are around 870
+tests across the engine, the AI and the GUI, run headless from one script, with a
+check for leaked objects. To make sure the engine's tests actually pin the rules down,
+I break the rules on purpose at the end of each engine milestone and count how many of
+those mutations the suite catches. Milestone 10 caught 35 of 36. The AI gets a soak
+test that plays whole seeded encounters against itself and checks that each one ends
+and replays exactly, and tournaments between AI settings to measure which plays better.
 
 ## The architecture
 
 - **Engine.** `addons/modmox_rules/`, built from `RefCounted` and `Resource` classes
   with no scene tree dependency, and no game content inside it.
+- **AI.** `addons/modmox_ai/`, which reads only its player's view and looks ahead on
+  re-dealt copies of the game.
+- **GUI.** `ui/`, game-side, where a test fails if any file but the Encounter
+  Presenter mentions the engine.
 - **Content.** Card Definitions live game-side in `content/cards/` as `.tres` files,
   with a test that checks no two cards share a sub-resource.
 - **Events.** Every change to the game goes through one pipeline: proposed, offered
@@ -90,9 +130,10 @@ all 24.
   result until the next event.
 - **Typing.** Static typing is enforced everywhere, with untyped declarations treated
   as compile errors, and a test fails if that setting is ever undone.
-- **Decision records.** Eighteen ADRs cover the engine's design, alongside a glossary
+- **Decision records.** Twenty-two ADRs cover the design, alongside two glossaries
   and a milestone roadmap.
 
-Next up is replacement and prevention effects, and after that the first playable
-slice of Alpha against a simple AI. I wrote up how the first nine milestones went in
-[A modular Magic engine](/blog/a-modular-magic-engine).
+Next up is the stack, with arrows from spells to their targets and the first
+animations, and then casting by dragging cards out of your hand. I wrote up the first
+nine milestones in [A modular Magic engine](/blog/a-modular-magic-engine), and the AI
+and the GUI in [ModMox gets an opponent](/blog/modmox-gets-an-opponent).
