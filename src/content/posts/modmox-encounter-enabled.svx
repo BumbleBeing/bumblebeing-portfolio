@@ -1,0 +1,148 @@
+---
+title: 'ModMox: Encounter-Enabled'
+blurb: The debug panel is gone, cards fly between zones, the game taps your lands for you, and Emblems and Potions arrive. A full encounter is now playable from opening hand to last point of damage.
+date: 2026-11-13
+tags: [game]
+---
+
+At the end of the [last post](/blog/modmox-gets-an-opponent), ModMox was a game you
+could play a round of if you didn't mind answering half the questions through a debug
+panel full of lists. Mulligans went through the panel, and so did casting a spell.
+Nothing moved, either. The board just blinked from one state to the next, and the
+Villain took its whole turn faster than you could read it.
+
+Only two days later, the GUI milestone is closed, the debug panel has been deleted, and the
+Magic part of the game is a joy! A whole encounter now plays out the way you'd expect it to.
+
+The work fell into five chunks:
+
+## Every decision gets a real input
+
+The rule from last time was that a kind of decision isn't finished until its debug
+form is deleted. Now, that rule has been rendered fully moot. Cards are cast, or played as lands, by
+dragging them out of your hand or double-clicking them, and a single click does
+nothing. Your hand stays in whatever order you drag it into, and a canceled cast puts
+the card back exactly where it was.
+
+The stack got its own window. Each spell or ability on it gets a color for as long as
+it's there, and hovering an entry marks its source and its targets on the board in
+that color. That needed something to target on the stack, so Counterspell joined the
+card pool, followed by Raise Dead, the first card that targets a graveyard, and
+Stifle, the first card from outside Alpha and the first that counters an ability.
+Clicking any pile now opens a window onto it, libraries included, with a card back for
+every card you don't know. The engine keeps track of which cards you do know, so the
+one you put on the bottom during a mulligan is sitting there face up.
+
+The pregame got an overlay of its own, with your opening hand drawn large and buttons
+that read things like "Keep 6" and "Free Mulligan." Once that landed, the debug panel
+had nothing left to answer and was removed. There's now a test that fails if the
+engine ever gains a kind of decision with no input, so it can't quietly come back.
+
+## A game you can follow
+
+The most useful change for actually reading the board is that rules text is no longer
+written by me. It's generated from each card's abilities, in current Oracle wording,
+every time the card is drawn. That was always going to be necessary, because a card a
+player has modified needs text nobody typed. The cost is that some real wordings are
+out of reach. Howling Mine says "that player draws a card" instead of "an additional
+card," because nothing in its abilities says "additional." I'll take plainly correct
+over word for word. Anything the generator has no words for prints as a class name in
+square brackets, and a test walks every card and fails on a bracket.
+
+Then things started moving. The Encounter Screen still throws its board away and
+rebuilds it from every snapshot, and I didn't want to give that up, because it's why
+the screen can't get out of sync with the game. So animation sits on top. A small
+object outside the redrawn board remembers where each permanent's face was last
+drawn, and after a rebuild each face eases from there to where it belongs. A redraw in
+the middle of a move is harmless, since the new face just picks up where the old one
+had gotten to. Undo doesn't animate at all, because nothing happened in the game. Cards
+that change zones fly there, turning from one kind of face into the other on the way.
+
+My first try timed the moves off the wall clock, and every one of them started with a
+jump. The frame that rebuilds the board is a slow one, and it was eating the first
+chunk of every animation. Now time is counted a frame at a time, and no frame is
+allowed to count for more than a thirtieth of a second.
+
+The Villain also got slowed down. Its next answer is held back until the last one has
+been on screen long enough to read, about half a second after an action and less after
+tapping a land, and the time it spent thinking counts toward the wait. One Game Speed
+setting scales every wait, move and fade together, from Slow up to Blazing.
+
+For reading a card properly there's the Inspector. Right-click a card and it takes
+over the sidebar with the full card, a glow in the color of its rarity, everything
+currently affecting it, and a reminder for each keyword. I built a version that
+followed the cursor first, and it was too busy over the hand, so now it only shows
+what you pin. The board also stopped being gray. There are pixel art backdrops behind
+it and portraits on the player panels, a white wizard for you and a purple demon for
+the Villain, all placeholders until the real art exists.
+
+## Less clicking
+
+Paying for every spell by clicking lands one at a time was only ever a first step, so
+the game does it now. Auto-tap picks your lands using the same payment planner the AI uses for its
+own. I considered a Pay button to confirm the plan, and rejected it for adding a click
+to every spell to guard against a rare mistake. If you care which lands get tapped,
+tap them first, because mana already in your pool is spent before anything else. And
+before you commit, hovering a card shows a Tap Preview where only the sources that
+would be used keep their glow.
+
+Sharing the planner paid off right away. It turned out the AI would happily tap
+Llanowar Elves for green while an untapped Forest sat next to it. It reaches for a
+land first now, and fixing that for me fixed it for the Villain too.
+
+A few smaller things came with it. Yield Turn passes every priority until the next
+turn begins, holding Ctrl stops the game from passing anything for you, and pass,
+undo, cancel and hold can each be rebound to any key.
+
+## An AI that stops wasting its mana
+
+The Villain had a bad habit that got fixed along the way. It would activate an ability
+every time it had spare mana, stacked on top of itself, even when that accomplished
+nothing. It would give one creature flying four times in a row.
+
+Three things were conspiring. The board evaluator counted a keyword once for every
+time it had been granted, so four helpings of flying looked four times as good. The
+one-step lookahead scored the board while an "until end of turn" effect was still
+there, so any pump beat passing. And by the end of a longer rollout the effect had
+worn off, everything tied, and the tie went to the first instinct.
+
+Now a keyword counts once, an ability is never activated on top of itself, and when a
+combat trick is on the table every option gets played out to the end of the turn
+before it's scored. A trick only wins by leaving something that lasts, like damage
+dealt or a creature saved. The AI also weighs activating an ability two, four or eight
+times as a single plan, so a pump that takes two activations to win a fight isn't
+dismissed for looking useless after one. Last time the search changed the AI's mind in
+about 5% of decisions. In the new benchmark Normal answered differently from Easy in
+30 of 190, and in nearly all of those Easy activated something and Normal passed.
+
+## Emblems and Potions
+
+Milestone 14 is the first one that points at the roguelike. Emblems already existed as
+the way a character's lasting effects reach the engine, and now they can have
+abilities you activate. The two test Boons are Diviner's Boon, which draws two cards
+at sorcery speed, and Electromancer's Boon, which deals 3 damage to any target. Each
+works once per game.
+
+"Once per game" is a restriction on the ability, the way the rules treat it, and not a
+cost. The difference shows up when someone responds. An Emblem's ability goes on the
+stack like any other, so Stifle can counter it, and the ability is spent either way.
+
+An Emblem is never used up, though. What gets used up is a Potion, a new kind of
+object whose single ability has "use up this Potion" as part of its cost. The mock one
+is called Big Gulp and gives a creature +2/+2 until end of turn. Making it an ability
+instead of a spell meant it needed no card to be, no zone to be cast from, and nowhere
+to go afterward. It also gives a nice rules answer for free: Stifle counters a Potion,
+Counterspell doesn't, and the Potion is gone regardless, because costs are paid first.
+
+## Where it stands
+
+The card pool is at 44 cards, there are 36 decision records, and the count of test
+functions has passed 2,000, most of them game-side. Every decision in an encounter
+has a real input, and nothing in the encounter is waiting on a debug tool.
+
+So the next milestone finally leaves the battlefield. It's the Deckbuilder, where
+you'll build decks from your collection and apply Mods to cards, three slots to a
+card. A prototype of it is built and waiting on me to sign off. The run around it is
+designed on paper too, with a map for each stage, stores, workshops, and Hearts to
+lose, all derived from a single seed. None of that is code yet. But the thing a run is
+made of, one fight against one opponent, finally plays like a game.

@@ -1,6 +1,6 @@
 ---
 title: ModMox
-blurb: A Magic rules engine in Godot, built to the Comprehensive Rules so a roguelike can let players rewrite their own cards, with an AI to play against.
+blurb: A Magic rules engine in Godot, built to the Comprehensive Rules so a roguelike can let players rewrite their own cards, with an AI to play against and a full encounter on screen.
 tags: [game]
 tools: [Godot 4.7.2, GDScript, GUT]
 date: 2026-11-06
@@ -15,14 +15,14 @@ part that makes all of that possible: a rules engine for Magic, an AI that plays
 and a screen to play on. The engine is written in GDScript as a self-contained Godot
 addon that knows nothing about the game around it.
 
-Twelve milestones in, the engine handles the pregame and London mulligans, every phase
-and step of a turn, priority and the stack, lands and mana, casting with targets,
-combat with first strike, double strike and trample, state-based actions, triggered
-abilities, the layer system for static abilities, and replacement and prevention
-effects. The current card pool is 41 cards from Alpha, from Grizzly Bears and
-Lightning Bolt to Serra Angel and Shivan Dragon, and every one of them is plain data.
-The thirteenth milestone is the GUI, which is far enough along that you can play an
-encounter against the AI by clicking on things.
+Fourteen milestones in, the engine handles the pregame and London mulligans, every
+phase and step of a turn, priority and the stack, lands and mana, casting with
+targets, combat with first strike, double strike and trample, state-based actions,
+triggered abilities, the layer system for static abilities, replacement and prevention
+effects, and abilities activated from Emblems and Potions. The current card pool is 44
+cards, nearly all from Alpha, from Grizzly Bears and Lightning Bolt to Serra Angel and
+Shivan Dragon, and every one of them is plain data. A whole encounter against the AI
+is playable on screen, from the opening hand to the last point of damage.
 
 ## Why follow the real rules
 
@@ -84,9 +84,10 @@ On top of its heuristics sits Flat Monte Carlo, which plays the best few candida
 forward through the next turn on the same imagined worlds. Difficulty only sets how
 much it searches. It never adds mistakes, and search budgets are counted in samples
 instead of milliseconds, so the AI plays the same on any machine and after any reload.
-The search doesn't buy much strength yet. Normal beat Easy 52.5% of the time over 200
-games, short of the 55% I was aiming for, mostly because combat is planned the same
-way at every level.
+The search didn't buy much strength at first. Normal beat Easy 52.5% of the time over
+200 games, short of the 55% I was aiming for, mostly because combat is planned the
+same way at every level. Since then it has learned to judge a combat trick by what's
+left after the turn ends, which stopped it from spending mana on pumps that do nothing.
 
 ## The screen
 
@@ -98,14 +99,29 @@ nothing else, so it can't leak a hidden card it was never given.
 Cards are drawn from their characteristics, with frames baked from layers, so a card
 that changes color mid-run gets the right frame without anyone drawing it. What a
 click means is worked out in one place, and the glow that marks what you can choose is
-drawn from the same answer. Activating abilities, paying mana, choosing targets and
-all three combat decisions have their own inputs. The rest still go through a
-temporary debug panel, and each one loses its debug form when its real input lands.
+drawn from the same answer. Every kind of decision has an input of its own, from
+dragging a card out of your hand to pairing blockers with attackers, and a test fails
+if the engine ever gains a decision without one.
+
+Rules text is generated from a card's abilities each time it's drawn, in current
+Oracle wording, so a modified card always says what it does. The screen still rebuilds
+its board from every snapshot, and animation sits on top: an object outside the board
+remembers where each card was, and cards ease to their new places or fly between
+zones. The Villain's answers are paced so you can read them, the game taps your lands
+for you with the same planner the AI uses, and right-clicking a card pins it in an
+inspector that shows everything currently affecting it.
+
+## Emblems and Potions
+
+Emblems are how a character's lasting effects will reach the engine, and they can have
+abilities you activate, some of them only once per game. A Potion is the thing that
+gets used up. It's an object with one ability whose cost is the Potion itself, so it
+uses the stack like any other ability and is gone even if it's countered.
 
 ## How it's tested
 
 Each milestone starts by agreeing on its scope and test scenarios, gets built
-test-first with GUT, and isn't done until everything is green. There are around 870
+test-first with GUT, and isn't done until everything is green. There are a little over 2,000
 tests across the engine, the AI and the GUI, run headless from one script, with a
 check for leaked objects. To make sure the engine's tests actually pin the rules down,
 I break the rules on purpose at the end of each engine milestone and count how many of
@@ -130,10 +146,12 @@ and replays exactly, and tournaments between AI settings to measure which plays 
   result until the next event.
 - **Typing.** Static typing is enforced everywhere, with untyped declarations treated
   as compile errors, and a test fails if that setting is ever undone.
-- **Decision records.** Twenty-two ADRs cover the design, alongside two glossaries
+- **Decision records.** Thirty-six ADRs cover the design, alongside two glossaries
   and a milestone roadmap.
 
-Next up is the stack, with arrows from spells to their targets and the first
-animations, and then casting by dragging cards out of your hand. I wrote up the first
-nine milestones in [A modular Magic engine](/blog/a-modular-magic-engine), and the AI
-and the GUI in [ModMox gets an opponent](/blog/modmox-gets-an-opponent).
+Next up is the Deckbuilder, where you'll build decks from your collection and apply
+Mods to cards. It's the first milestone outside an encounter. I've written up the work
+so far in three posts: [A modular Magic engine](/blog/a-modular-magic-engine) on the
+first nine milestones, [ModMox gets an opponent](/blog/modmox-gets-an-opponent) on the
+AI and the first of the GUI, and
+[ModMox: Encounter-Enabled](/blog/modmox-encounter-enabled) on finishing the encounter.
