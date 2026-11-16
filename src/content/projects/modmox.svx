@@ -1,6 +1,6 @@
 ---
 title: ModMox
-blurb: A Magic rules engine in Godot, built to the Comprehensive Rules so a roguelike can let players rewrite their own cards, with an AI to play against and a full encounter on screen.
+blurb: A Magic rules engine in Godot, built to the Comprehensive Rules so a roguelike can let players rewrite their own cards, with an AI to play against and a run you can walk across a generated map.
 tags: [game]
 tools: [Godot 4.7.2, GDScript, GUT]
 date: 2026-11-06
@@ -10,19 +10,21 @@ repo: https://github.com/BumbleBeing/ModMox
 ModMox is going to be a roguelike RPG where you fight your way through a run with a
 deck of Magic: the Gathering cards, and the cards you earn along the way can be
 changed. A spell might lose a point of its cost, a creature might pick up flying, a
-burn spell might stop targeting and hit everything instead. Right now the work is the
-part that makes all of that possible: a rules engine for Magic, an AI that plays it,
-and a screen to play on. The engine is written in GDScript as a self-contained Godot
-addon that knows nothing about the game around it.
+burn spell might stop targeting and hit everything instead. Underneath it is a rules
+engine for Magic, written in GDScript as a self-contained Godot addon that knows
+nothing about the game around it, with an AI that plays it and a screen to play on.
+The roguelike around that has started to exist too.
 
-Fourteen milestones in, the engine handles the pregame and London mulligans, every
+The engine handles the pregame and London mulligans, every
 phase and step of a turn, priority and the stack, lands and mana, casting with
 targets, combat with first strike, double strike and trample, state-based actions,
 triggered abilities, the layer system for static abilities, replacement and prevention
 effects, and abilities activated from Emblems and Potions. The current card pool is 44
 cards, nearly all from Alpha, from Grizzly Bears and Lightning Bolt to Serra Angel and
 Shivan Dragon, and every one of them is plain data. A whole encounter against the AI
-is playable on screen, from the opening hand to the last point of damage.
+is playable on screen, from the opening hand to the last point of damage, and a debug
+run strings encounters together: build a deck, walk a Stage's map, lose Hearts, beat
+the Boss.
 
 ## Why follow the real rules
 
@@ -118,11 +120,39 @@ abilities you activate, some of them only once per game. A Potion is the thing t
 gets used up. It's an object with one ability whose cost is the Potion itself, so it
 uses the stack like any other ability and is gone even if it's countered.
 
+## The run
+
+<img
+	src="/modmox/map-nodes.webp"
+	alt="Eight round pixel art map icons at four times their size: a red flag for the start, a stack of gold for the store, a hammer for the workshop, crossed swords for a lesser encounter, a horned skull for an elite encounter, a treasure chest for the trove, a question mark among stars for the chaos node, and a jeweled crown for the boss"
+	width="612"
+	height="316"
+	loading="lazy"
+	class="post-pixel"
+/>
+
+A run is one plain data object holding its seed, your Collection of cards, your saved
+decks, three Hearts and your gold. It knows nothing about screens, and a test fails if
+anything on the run side names a file in the GUI. The Collection owns every card and a
+deck only points at cards in it, so a card carries its Mods into every deck it's in.
+
+Decks are built in the Deckbuilder, where each card has three Mod Slots, and they're
+kept in the Deckbox, which is the only way into the Deckbuilder. The Deckbox opens by
+itself before each fight, once the Villain is revealed, and its Start button is the
+one place a deck's legality is checked.
+
+Each Stage's map is generated from the run's seed. The generator rolls a map, checks
+the whole thing against its rules, and throws it away and rolls again if it fails,
+instead of repairing it, which keeps the odds honest and the map exactly replayable.
+Every kind of random choice in a run draws from a stream of its own, so adding a new
+one never reshuffles the old ones. Fights are the only stops on the map that do
+anything yet. Stores, Workshops and treasure are still to come.
+
 ## How it's tested
 
 Each milestone starts by agreeing on its scope and test scenarios, gets built
-test-first with GUT, and isn't done until everything is green. There are a little over 2,000
-tests across the engine, the AI and the GUI, run headless from one script, with a
+test-first with GUT, and isn't done until everything is green. There are around 2,370
+tests across the engine, the AI, the run and the GUI, run headless from one script, with a
 check for leaked objects. To make sure the engine's tests actually pin the rules down,
 I break the rules on purpose at the end of each engine milestone and count how many of
 those mutations the suite catches. Milestone 10 caught 35 of 36. The AI gets a soak
@@ -137,6 +167,8 @@ and replays exactly, and tournaments between AI settings to measure which plays 
   re-dealt copies of the game.
 - **GUI.** `ui/`, game-side, where a test fails if any file but the Encounter
   Presenter mentions the engine.
+- **Run.** `run/`, a run's state with no nodes in it, which never names anything in
+  the GUI and answers which screen comes next with a plain value.
 - **Content.** Card Definitions live game-side in `content/cards/` as `.tres` files,
   with a test that checks no two cards share a sub-resource.
 - **Events.** Every change to the game goes through one pipeline: proposed, offered
@@ -146,12 +178,13 @@ and replays exactly, and tournaments between AI settings to measure which plays 
   result until the next event.
 - **Typing.** Static typing is enforced everywhere, with untyped declarations treated
   as compile errors, and a test fails if that setting is ever undone.
-- **Decision records.** Thirty-six ADRs cover the design, alongside two glossaries
+- **Decision records.** Thirty-seven ADRs cover the design, alongside two glossaries
   and a milestone roadmap.
 
-Next up is the Deckbuilder, where you'll build decks from your collection and apply
-Mods to cards. It's the first milestone outside an encounter. I've written up the work
-so far in three posts: [A modular Magic engine](/blog/a-modular-magic-engine) on the
-first nine milestones, [ModMox gets an opponent](/blog/modmox-gets-an-opponent) on the
-AI and the first of the GUI, and
-[ModMox: Encounter-Enabled](/blog/modmox-encounter-enabled) on finishing the encounter.
+Next up is Spoils, the gold and cards you win from a Villain's own deck, and then a
+run of five Stages in a row. I've written up the work so far in four posts:
+[A modular Magic engine](/blog/a-modular-magic-engine) on the first nine milestones,
+[ModMox gets an opponent](/blog/modmox-gets-an-opponent) on the AI and the first of
+the GUI, [ModMox: Encounter-Enabled](/blog/modmox-encounter-enabled) on finishing the
+encounter, and [ModMox: On the Map](/blog/modmox-on-the-map) on the Deckbuilder and
+the Stage Map.

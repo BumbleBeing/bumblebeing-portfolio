@@ -1,0 +1,167 @@
+---
+title: 'ModMox: On the Map'
+blurb: The game finally leaves the battlefield. There's a deckbuilder, a Deckbox, a generated Stage Map to walk across, and a run that can be won or lost.
+date: 2026-11-15
+tags: [game]
+---
+
+<img
+	src="/modmox/map-nodes.webp"
+	alt="Eight round pixel art map icons at four times their size: a red flag for the start, a stack of gold for the store, a hammer for the workshop, crossed swords for a lesser encounter, a horned skull for an elite encounter, a treasure chest for the trove, a question mark among stars for the chaos node, and a jeweled crown for the boss"
+	width="612"
+	height="316"
+	class="post-pixel"
+/>
+
+The [last post](/blog/modmox-encounter-enabled) ended with one fight against one
+opponent, done, and nothing around it. You picked two decks from a debug form and
+played. Everything that makes it a roguelike was a set of design notes.
+
+Two days later you can start a run, build a deck, walk a map, pick your fights, lose
+Hearts, and beat a Boss. A lot of it is placeholder, and several of the stops on the
+map don't do anything yet, but the loop closes. The work fell into five chunks:
+
+## A deckbuilder
+
+The Deckbuilder was the first screen outside an encounter, and it went the way the GUI
+did: a design round, a throwaway prototype built in steps that I signed off on one at
+a time, then the real thing test-first. The prototype was built to be ported. All of
+its logic lived in a Working Deck class with no nodes in it, and the screen only drew
+that and reported input, so the port moved the code instead of rewriting it.
+
+Your collection is a scrolling grid across the top, and your deck is eight columns
+across the bottom, one for each mana value plus one for lands. The columns are free
+piles. A card stays where you dropped it, and nothing sorts while you're building
+unless you press Sort. A deck is legal at 40 cards, with no maximum and no limit on
+copies.
+
+Every card shows three bubbles, its Mod Slots, green for a Mod and red for a Hex,
+which is a Mod that hurts and arrives already stuck to the card. Applying a Mod opens
+a window that shows the card before and after, and asks if you're sure, because it's
+final. A Mod's name goes in front of the card's, so a Grizzly Bears with Violent on it
+is Violent Grizzly Bears. That goes for basic lands too. Lands are free and unlimited
+right up until one takes a Mod, at which point that copy becomes a card you own, with
+a name like Ancient Plains.
+
+## A run, and the box of decks it carries
+
+<img
+	src="/modmox/run-bar.webp"
+	alt="Six pixel art icons at five times their size: a full red heart, an empty gray heart, a gold coin, a brown satchel, a maroon deck box, and a gold star"
+	width="600"
+	height="120"
+	loading="lazy"
+	class="post-pixel"
+/>
+
+There's a new top-level folder in the repo, `run/`, sitting beside `ui/`. A run is one
+plain data object that holds the Run Seed, your Collection, your saved decks, three
+Hearts and your gold. It knows nothing about screens. A test fails if anything in
+`run/` so much as names a file in `ui/`, the same trick that keeps the engine out of
+the GUI, pointed the other way. Even "which screen comes next" is answered by the run
+side with a plain value, and the GUI looks up the scene for it.
+
+The Collection owns every card, and a deck only points at cards in it. So one card can
+be in several decks and brings its Mods to each, and a card you sell drops out of
+every deck at once.
+
+Your saved decks live in the Deckbox, which is also the only door into the
+Deckbuilder. It opens whenever you want from the map, and it opens by itself right
+before a fight, after the Villain is revealed, so you can rebuild knowing who you're
+facing. That second time it has a Start button, grayed out while your active deck is
+illegal, and that button is the only place legality is checked. You can save a 12-card
+deck, and you can sell a card out from under a legal one. I considered checking in all
+of those places, but each check would need its own way out, and the one before the
+fight would still be needed. So you meet the problem once, on the screen where you can
+fix it.
+
+Those icons are the Run Bar: Hearts, gold, the Satchel where Items will live, and the
+Deckbox, with the star that marks your active deck. Losing a fight costs a Heart, and
+so does a draw.
+
+## A map to walk
+
+Each Stage has a map, a grid ten rows tall and nine columns wide. The bottom and top
+are always the same: a start, then a Store and a Workshop, and at the far end another
+Workshop and Store before the Boss. The six rows between are generated.
+
+The generator rolls a map in passes and then checks the whole thing against its rules,
+like every path having between two and four fights. If the map fails, it gets thrown
+away and rolled again. My first idea was to roll freely and then repair whatever was
+wrong, and I dropped it, because a repair is hard to prove will ever finish and every
+fix quietly bends the odds toward whatever the repair prefers. Rerolling keeps the
+percentages honest. Over 2,000 seeds every one produced a valid map, in 8.7 attempts
+on average and 53 at worst, at about a millisecond an attempt. I cut the most fights
+on a path from five to four during review, which more than doubled the attempts and
+was still nowhere near mattering.
+
+All of it comes from the Run Seed. The map, the Boss, which Villain a node gives you,
+and even where each icon sits inside its cell each draw from a stream of their own, so
+adding a new kind of random choice later can't reshuffle the old ones. Every attempt
+at a fight gets a fresh seed too, so a Boss rematch is a new game and not a replay of
+the one you lost.
+
+<img
+	src="/modmox/portraits.webp"
+	alt="Two pixel art portraits at eight times their size: a white-bearded wizard in a pointed white hat, and a purple horned demon with yellow eyes and bared teeth"
+	width="584"
+	height="304"
+	loading="lazy"
+	class="post-pixel"
+/>
+
+On screen you only see your own row and the two ahead, and the view glides up as you
+go. You are your portrait, the wizard for now, rocking gently on whatever node you're
+standing on. The nodes you can reach glow, the links you can take are lit as rows of
+square dots, and the path you've walked turns gold behind you. The Boss waits at the
+top on a larger clay disc inside a red ring, breathing. That's the demon, who is
+currently every Villain in the game.
+
+Fights are the only stops that do anything so far. Stores, Workshops, Troves and Chaos
+nodes are walked through. There are five placeholder Stages, one per color, built from
+the three decks that exist. And every debug run hands you an Emblem called Playtest
+Bolt, which deals 20 damage to any target for no mana, so the end of a run can be
+tested without having to earn it.
+
+## One look for everything
+
+With three screens to draw, the styling stopped being decided one button at a time.
+The recurring surface is something I'm calling Dither Shading: a rough gradient from a
+lighter tone at the top to a darker one at the bottom, in five bands of chunky blocks
+that are dithered where they meet. It's painted for each surface's own height, so the
+blocks never stretch. Panels, rows and buttons all use it now.
+
+The card inspector got the same treatment. The one in an encounter and the one in the
+Deckbuilder are now built from the same parts, each in its own colors, slate for the
+battlefield and dark maroon for the workbench. A layout change to one is a change to
+both.
+
+## Pulling the Encounter Screen apart
+
+The Encounter Screen had grown into the file where everything lived, so two pieces
+moved out. The Hero's hand is now a Hand Strip, and cards in the air belong to a
+Flight Layer. The screen tells each what to show, and each reports back what happened
+without knowing anything about the rest. The payoff is in the tests. The hand's
+behavior used to need a whole encounter running to check, and now it's driven from a
+hand-built description with no engine at all.
+
+An old annoyance got fixed along the way. A hand of seven or more cards used to
+jump around under the cursor as it fanned open. In a hand of eight, moving the mouse
+one pixel could move a card 70 pixels. It's 3 now.
+
+The Villain got one more lesson as well. With the sample Emblems on, it holds an
+effect that deals it 2 damage whenever it plays a land, and on Hard it played a land
+at 1 life and died. Land plays had been automatic and never went through the search.
+Now Normal and Hard weigh a land that looks costly against holding it for the turn.
+
+## Where it stands
+
+There are 37 decision records and around 2,370 test functions, and the roadmap now
+runs out to milestone 31. The card pool is still 44 cards, since none of this needed a
+new one.
+
+A debug run goes from the Deckbox to a Stage, across the map, and ends when you beat
+the Boss or lose your third Heart. What it doesn't do is pay you. Next up is Spoils,
+the gold and cards you win from a Villain's own deck, and after that five Stages in a
+row so a run is the full length. Then saving, choosing your Hero, and making the
+Stores and Workshops into places instead of scenery.

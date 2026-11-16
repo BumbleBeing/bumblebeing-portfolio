@@ -515,6 +515,16 @@
 		0 4px 10px -2px var(--shadow-spread);
 }
 
+/* Pixel art inside a Post body: a sprite sheet enlarged by a whole number with
+ * no smoothing. Kept narrow enough that the frame never has to shrink it on a
+ * wide screen, and drawn with hard edges wherever the browser does scale it. */
+.post-pixel {
+	display: block;
+	width: 100%;
+	height: auto;
+	image-rendering: pixelated;
+}
+
 /* ---------------------------------------------------------------------------
  * Thumbnail frame on project cards: a band of capped comb. Amber cells with
  * darker wax lines, drawn by masking a line colour over the cell fill so both
