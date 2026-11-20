@@ -19,12 +19,12 @@ The engine handles the pregame and London mulligans, every
 phase and step of a turn, priority and the stack, lands and mana, casting with
 targets, combat with first strike, double strike and trample, state-based actions,
 triggered abilities, the layer system for static abilities, replacement and prevention
-effects, and abilities activated from Emblems and Potions. The current card pool is 44
-cards, nearly all from Alpha, from Grizzly Bears and Lightning Bolt to Serra Angel and
-Shivan Dragon, and every one of them is plain data. A whole encounter against the AI
-is playable on screen, from the opening hand to the last point of damage, and a debug
-run strings encounters together: build a deck, walk a Stage's map, lose Hearts, beat
-the Boss.
+effects, and abilities activated from Emblems and Potions. The current card pool is
+121 cards from 45 sets, from Grizzly Bears and Lightning Bolt to Oblivion Ring and
+Brimaz, King of Oreskos, and every one of them is plain data. A whole encounter
+against the AI is playable on screen, from the opening hand to the last point of
+damage, and a debug run strings encounters together: build a deck, walk a Stage's map,
+win cards from the Villains you beat, lose Hearts, beat the Boss.
 
 ## Why follow the real rules
 
@@ -148,10 +148,45 @@ Every kind of random choice in a run draws from a stream of its own, so adding a
 one never reshuffles the old ones. Fights are the only stops on the map that do
 anything yet. Stores, Workshops and treasure are still to come.
 
+Winning a fight pays Spoils: gold, and one to three cards drawn evenly from the
+Villain's own deck, so the decks themselves are the tuning. You take all of it, and a
+loss or a draw pays nothing.
+
+## Stages and Villains
+
+<img
+	src="/modmox/kitty-keep-villains.webp"
+	alt="Eight pixel art cat portraits at four times their size: a gray house cat, a blonde lion in purple, a tan maned lion, a snarling lynx, a white-maned lion in gold armor, a tiger in red armor, a pale green spirit cat with a long beard, and a crowned lion king in blue"
+	width="612"
+	height="316"
+	loading="lazy"
+	class="post-pixel"
+/>
+
+A Stage lists its Villains by Rank, Lesser, Elite and Boss, and a Villain's Rank comes
+from the list it was taken from, so the same Villain can be an Elite early and a
+Lesser later. The first real Stage is Kitty Keep, white's first, with eight cat
+Villains that each have a deck of their own. It has a backdrop as tall as its whole
+map that scrolls as you climb, and scenery placed at random from the run's seed. The
+other colors are still placeholders.
+
+Each Villain's portrait is drawn by hand at 32 by 32 pixels after the art of a real
+Magic card, along with a second picture of it wincing and a third with its eyes
+closed, for showing damage and blinking later.
+
+## Adding cards
+
+Cards are added on a track of their own, outside the milestones. Each one starts from
+its current Oracle data and is sorted by what the engine can already express: ready to
+add, blocked on a new primitive, set aside because it needs something new on screen,
+or unsuited to the game. A blocked card's primitive is agreed and built test-first
+before the card goes in. That's how Equipment, counters, tokens, modal spells,
+flashback, Auras, ward and surveil arrived, each for a specific card.
+
 ## How it's tested
 
 Each milestone starts by agreeing on its scope and test scenarios, gets built
-test-first with GUT, and isn't done until everything is green. There are around 2,370
+test-first with GUT, and isn't done until everything is green. There are around 3,790
 tests across the engine, the AI, the run and the GUI, run headless from one script, with a
 check for leaked objects. To make sure the engine's tests actually pin the rules down,
 I break the rules on purpose at the end of each engine milestone and count how many of
@@ -178,13 +213,14 @@ and replays exactly, and tournaments between AI settings to measure which plays 
   result until the next event.
 - **Typing.** Static typing is enforced everywhere, with untyped declarations treated
   as compile errors, and a test fails if that setting is ever undone.
-- **Decision records.** Thirty-seven ADRs cover the design, alongside two glossaries
+- **Decision records.** Sixty-nine ADRs cover the design, alongside two glossaries
   and a milestone roadmap.
 
-Next up is Spoils, the gold and cards you win from a Villain's own deck, and then a
-run of five Stages in a row. I've written up the work so far in four posts:
+Next up is making a run its full length, five Stages of rising Tier in five different
+colors. I've written up the work so far in five posts:
 [A modular Magic engine](/blog/a-modular-magic-engine) on the first nine milestones,
 [ModMox gets an opponent](/blog/modmox-gets-an-opponent) on the AI and the first of
 the GUI, [ModMox: Encounter-Enabled](/blog/modmox-encounter-enabled) on finishing the
-encounter, and [ModMox: On the Map](/blog/modmox-on-the-map) on the Deckbuilder and
-the Stage Map.
+encounter, [ModMox: On the Map](/blog/modmox-on-the-map) on the Deckbuilder and the
+Stage Map, and [ModMox: Kitty Keep](/blog/modmox-kitty-keep) on the first real Stage,
+its Villains and the card track.

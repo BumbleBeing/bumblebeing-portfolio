@@ -1,0 +1,135 @@
+---
+title: 'ModMox: Kitty Keep'
+blurb: The first real Stage is a castle full of cats. Villains get faces and decks of their own, the card pool nearly triples, and winning a fight finally pays.
+date: 2026-11-20
+tags: [game]
+---
+
+<img
+	src="/modmox/kitty-keep-villains.webp"
+	alt="Eight pixel art cat portraits at four times their size: a gray house cat, a blonde lion in purple, a tan maned lion, a snarling lynx, a white-maned lion in gold armor, a tiger in red armor, a pale green spirit cat with a long beard, and a crowned lion king in blue"
+	width="612"
+	height="316"
+	class="post-pixel"
+/>
+
+When I [last wrote](/blog/modmox-on-the-map), a run was a walk across a generated map
+of placeholder Stages, fighting the same purple demon piloting one of three test
+decks, for no reward. Every piece of the loop existed and none of it had any
+character.
+
+Five days and 28 commits later there's a place called Kitty Keep, and the eight cats
+above live there. The work fell into five chunks:
+
+## A Stage that's somewhere
+
+Kitty Keep is white's first Stage, and the first one that isn't a slate rectangle.
+Each Stage can now have a Map Backdrop, one tall pixel art picture as wide as the
+screen and as tall as the whole map. It scrolls with the map as you climb, so the
+nodes sit on its ground. Kitty Keep's is a meadow with a castle and open sky.
+
+Scattered over that is Scenery. A Stage lists the kinds it has and how many of each,
+and the map places them at random from the Run Seed, so the trees, flower bushes and
+hay bales land somewhere new each run. They're kept on a mask painted over the meadow,
+which leaves out the castle and the sky, and they keep clear of every node, every
+link and each other. A spot that breaks a rule is thrown away and rolled again, the
+same way the map itself is. Some of the Scenery is animated, which in Kitty Keep means
+ginger, gray and black cats sitting around in the grass.
+
+## Villains with faces
+
+The demon is retired from Kitty Keep. A Villain's portrait is now drawn by hand at 32
+by 32 pixels, after the art of a real Magic card's first printing, turned to face the
+front. The Stage has three Lesser Villains, starting with Charmed Stray, the gray cat
+at the top left. Steppe Lynx and Kemba are among its Elites, and the Boss can be Zar
+Ojanen, Arahbo or Brimaz, picked when you enter. Each has a deck of its own.
+
+<img
+	src="/modmox/portrait-faces.webp"
+	alt="Two rows of three pixel art portraits at five times their size. The top row is a gray cat looking ahead, wincing with its eyes shut and head tilted, and with its eyes closed calmly. The bottom row is a crowned lion king looking ahead, grimacing with bared teeth, and with his eyes closed"
+	width="560"
+	height="380"
+	loading="lazy"
+	class="post-pixel"
+/>
+
+Every portrait comes in three pictures. Next to the normal one there's a Pain
+Portrait, the same character the moment after being hurt, wincing and knocked a
+little aside, and a Blink Portrait with the eyes closed and nothing else changed. The
+plan is for the pain one to show longer the more life was lost, and for the blink to
+flicker by every few seconds so the character seems alive. The game doesn't show
+either yet. They're drawn now so that every Villain arrives with all three.
+
+<img
+	src="/modmox/gulls-perch-villains.webp"
+	alt="Four pixel art bird portraits at four times their size: a white hydra of goose heads, a pale crowned eagle with raised wings, a dark blue bird with a skull-like beak, and a white-headed bird in gold armor holding a staff"
+	width="612"
+	height="168"
+	loading="lazy"
+	class="post-pixel"
+/>
+
+There's a second flock already drawn, for a Stage of birds that has portraits and no
+decks yet. That's the Goose Mother on the left.
+
+## 44 cards to 121
+
+A Stage of cat Villains needs cat decks, and the card pool was 44 cards of mostly
+Alpha. So cards now have a track of their own, outside the milestones. A card starts
+from its current Oracle data, and gets sorted into one of four piles. Ready means the
+engine can already express it. Blocked means it needs a new primitive. Set Aside means
+it needs something new on screen, which starts with a prototype. Unsuited means it
+could never mean anything in this game. Ready cards go in, at most 20 a session, and
+the rest wait in a file grouped by what they're waiting on.
+
+The original rule still holds, that a mechanic only enters the game with the first
+card that needs it. It just gets exercised a lot more often now. The pool is at 121
+cards from 45 sets, and getting there added Equipment, +1/+1 counters, lifelink,
+tokens, modal spells, flashback, the legend rule, library searches, cycling, ward,
+Auras, X costs and surveil, each one built test-first for a specific card. Oblivion
+Ring brought exile that undoes itself, and a way to draw it, with the exiled card
+tucked behind the Ring showing only its name. Brimaz alone needed four new pieces,
+since he makes a token that enters attacking when he attacks and one that enters
+blocking when he blocks.
+
+## Winning pays
+
+Beating a Villain now opens a Spoils screen. You get gold, and one to three cards
+drawn from the Villain's own deck, with better odds of more at higher Ranks. Every
+nonland copy in the deck is one even ticket, so there's no rarity weighting. The decks
+are the tuning, and a tougher Villain pays better because its deck is built richer.
+You take everything. There's no pick-one-of-three and no skip, since won cards go to
+your Collection and not your deck, and what you don't want can be sold once Stores
+work. A loss or a draw pays nothing.
+
+Mods got a real definition before anything hands them out. A Mod has a rarity, an
+Augmentation, which is what it does to the card, and a Mod Cost, which is what it adds
+to the card's mana cost. Its text is generated the way rules text is: "Modified card
+gets +1/+1 and gains trample. It costs {1} more to cast." Names got rules too. A
+card's Mods are named in alphabetical order so the name doesn't depend on the order
+you applied them, and the same Mod twice becomes Very. A Plains with Ancient once and
+Violent twice is an Ancient Very Violent Plains. Three times is Extremely.
+
+## Sharper tools
+
+The whole interface got a theme overhaul, and the main menu now has a pixel soldier
+standing on its window, with a little wisp of light floating around him. The Info
+Panel in an encounter was rebuilt after it turned into the place where every
+yes-or-no question gets asked, like whether to pay a ward cost or how much to pay for
+X.
+
+The test runner got stricter. Godot had been reporting 687 leaked objects at exit, and
+they turned out to be the test framework's own, kept alive by an engine fault that one
+specific class of mine happened to trigger. That's fixed, and a test run now fails if
+anything leaks at all. The suite also runs across several threads now.
+
+## Where it stands
+
+There are 121 cards, 69 decision records and around 3,790 test functions, up from
+2,370 five days ago. Kitty Keep is the only Stage with art, Villains and decks of its
+own. The other four colors are still placeholders.
+
+Next is making a run its full length, five Stages of rising Tier in five different
+colors, with proper screens for winning and losing. After that come a reveal screen
+before each fight, Armor, and the Store and Satchel, so gold has somewhere to go.
+Then the other four colors need their own Kitty Keeps.
